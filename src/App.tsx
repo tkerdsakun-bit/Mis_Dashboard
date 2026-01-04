@@ -1,25 +1,30 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary } from './supabaseClient';
+import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory } from './supabaseClient';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [showAddAssetModal, setShowAddAssetModal] = useState<boolean>(false);
+  const [showEditAssetModal, setShowEditAssetModal] = useState<boolean>(false);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState<boolean>(false);
   const [showCategoryModal, setShowCategoryModal] = useState<boolean>(false);
   const [showInkBudgetModal, setShowInkBudgetModal] = useState<boolean>(false);
+  const [showRepairHistoryModal, setShowRepairHistoryModal] = useState<boolean>(false);
+  const [showAddRepairModal, setShowAddRepairModal] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
   const [filterStatus, setFilterStatus] = useState<string>('ทั้งหมด');
   const [loading, setLoading] = useState<boolean>(true);
+  const [uploading, setUploading] = useState<boolean>(false);
 
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [departments, setDepartments] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [assetCategories, setAssetCategories] = useState<AssetCategory[]>([]);
   const [inkInventory, setInkInventory] = useState<InkItem[]>([]);
   const [inkBudget, setInkBudget] = useState<InkBudgetSummary | null>(null);
+  const [repairHistory, setRepairHistory] = useState<RepairHistory[]>([]);
 
   // คำนวณสถิติ
   const stats = [
@@ -61,10 +66,7 @@ const App = () => {
         .from('departments')
         .select('*');
       if (deptsError) throw deptsError;
-      if (deptsData) {
-        const deptList = deptsData as Department[];
-        setDepartments(deptList.map(d => d.name));
-      }
+      if (deptsData) setDepartments(deptsData as Department[]);
 
       // ดึงประเภททรัพย์สิน
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -83,7 +85,7 @@ const App = () => {
       if (inkData) setInkInventory(inkData as InkItem[]);
 
       // ดึงงบหมึกเดือนปัจจุบัน
-      const currentMonth = new Date().toISOString().slice(0, 7); // 2026-01
+      const currentMonth = new Date().toISOString().slice(0, 7);
       const { data: budgetData, error: budgetError } = await supabase
         .from('ink_budget_summary')
         .select('*')
@@ -91,6 +93,14 @@ const App = () => {
         .single();
       if (budgetError && budgetError.code !== 'PGRST116') throw budgetError;
       if (budgetData) setInkBudget(budgetData as InkBudgetSummary);
+
+      // ดึงประวัติการซ่อม
+      const { data: repairData, error: repairError } = await supabase
+        .from('repair_history')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (repairError) throw repairError;
+      if (repairData) setRepairHistory(repairData as RepairHistory[]);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -117,6 +127,34 @@ const App = () => {
     };
   };
 
+  // อัพโหลดรูปภาพไป Supabase Storage
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = fileName;
+
+      const { data, error } = await supabase.storage
+        .from('assets-images')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('assets-images')
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('❌ เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // เพิ่มทรัพย์สิน
   const addAsset = async (assetData: Partial<Asset>): Promise<void> => {
     try {
@@ -128,6 +166,24 @@ const App = () => {
     } catch (error) {
       console.error('Error adding asset:', error);
       alert('❌ เกิดข้อผิดพลาดในการเพิ่มทรัพย์สิน');
+    }
+  };
+
+  // แก้ไขทรัพย์สิน
+  const updateAsset = async (id: number, assetData: Partial<Asset>): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('assets')
+        .update(assetData)
+        .eq('id', id);
+      if (error) throw error;
+      alert('✅ แก้ไขทรัพย์สินสำเร็จ');
+      setShowEditAssetModal(false);
+      setShowDetailModal(false);
+      fetchAllData();
+    } catch (error) {
+      console.error('Error updating asset:', error);
+      alert('❌ เกิดข้อผิดพลาดในการแก้ไข');
     }
   };
 
@@ -159,6 +215,20 @@ const App = () => {
     }
   };
 
+  // ลบแผนก
+  const deleteDepartment = async (id: number, name: string): Promise<void> => {
+    if (!confirm(`ต้องการลบแผนก "${name}" หรือไม่?`)) return;
+    try {
+      const { error } = await supabase.from('departments').delete().eq('id', id);
+      if (error) throw error;
+      alert('✅ ลบแผนกสำเร็จ');
+      fetchAllData();
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      alert('❌ เกิดข้อผิดพลาด');
+    }
+  };
+
   // เพิ่มประเภททรัพย์สิน
   const addCategory = async (name: string, icon: string): Promise<void> => {
     try {
@@ -182,6 +252,20 @@ const App = () => {
       fetchAllData();
     } catch (error) {
       console.error('Error deleting category:', error);
+      alert('❌ เกิดข้อผิดพลาด');
+    }
+  };
+
+  // เพิ่มประวัติการซ่อม
+  const addRepairHistory = async (repairData: Partial<RepairHistory>): Promise<void> => {
+    try {
+      const { error } = await supabase.from('repair_history').insert([repairData]);
+      if (error) throw error;
+      alert('✅ เพิ่มประวัติการซ่อมสำเร็จ');
+      setShowAddRepairModal(false);
+      fetchAllData();
+    } catch (error) {
+      console.error('Error adding repair history:', error);
       alert('❌ เกิดข้อผิดพลาด');
     }
   };
@@ -224,14 +308,14 @@ const App = () => {
     link.click();
   };
 
-  // Modal เพิ่มทรัพย์สิน (พร้อมอัพโหลดรูป)
+  // Modal เพิ่มทรัพย์สิน
   const AddAssetModal = () => {
     const [formData, setFormData] = useState({
       name: '',
       tag: '',
       serial: '',
       category: assetCategories[0]?.name || '',
-      location: departments[0] || '',
+      location: departments[0]?.name || '',
       price: '',
       purchase_date: '',
       warranty_expiry: '',
@@ -240,10 +324,31 @@ const App = () => {
       warranty_days: 365,
       image_url: ''
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      addAsset(formData);
+      
+      let imageUrl = formData.image_url;
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile);
+        if (uploadedUrl) imageUrl = uploadedUrl;
+      }
+
+      addAsset({ ...formData, image_url: imageUrl });
     };
 
     return (
@@ -256,17 +361,17 @@ const App = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">รูปภาพ (URL)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">รูปภาพ</label>
                 <input 
-                  type="url" 
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleImageChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
                 />
-                {formData.image_url && (
-                  <img src={formData.image_url} alt="Preview" className="mt-2 h-32 object-cover rounded-lg" />
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="mt-2 h-32 object-cover rounded-lg" />
                 )}
+                {uploading && <p className="text-blue-600 mt-2">กำลังอัพโหลด...</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
@@ -320,7 +425,7 @@ const App = () => {
                   onChange={(e) => setFormData({...formData, location: e.target.value})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {departments.map(dept => <option key={dept}>{dept}</option>)}
+                  {departments.map(dept => <option key={dept.id}>{dept.name}</option>)}
                 </select>
               </div>
               <div>
@@ -355,8 +460,8 @@ const App = () => {
               </div>
             </div>
             <div className="flex gap-3 pt-4">
-              <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow">
-                ✅ บันทึก
+              <button type="submit" disabled={uploading} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow disabled:opacity-50">
+                {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
               </button>
               <button type="button" onClick={() => setShowAddAssetModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300">
                 ❌ ยกเลิก
@@ -368,86 +473,306 @@ const App = () => {
     );
   };
 
-  // Modal รายละเอียดทรัพย์สิน
-  const AssetDetailModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">รายละเอียดทรัพย์สิน</h2>
-          <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+  // Modal แก้ไขทรัพย์สิน
+  const EditAssetModal = () => {
+    if (!selectedAsset) return null;
+
+    const [formData, setFormData] = useState({
+      name: selectedAsset.name,
+      tag: selectedAsset.tag,
+      serial: selectedAsset.serial,
+      category: selectedAsset.category,
+      location: selectedAsset.location,
+      price: selectedAsset.price,
+      purchase_date: selectedAsset.purchase_date,
+      warranty_expiry: selectedAsset.warranty_expiry,
+      icon: selectedAsset.icon,
+      status: selectedAsset.status,
+      warranty_days: selectedAsset.warranty_days,
+      image_url: selectedAsset.image_url || ''
+    });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string>(selectedAsset.image_url || '');
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      let imageUrl = formData.image_url;
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile);
+        if (uploadedUrl) imageUrl = uploadedUrl;
+      }
+
+      updateAsset(selectedAsset.id, { ...formData, image_url: imageUrl });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">แก้ไขทรัพย์สิน</h2>
+            <button onClick={() => setShowEditAssetModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">รูปภาพ</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="mt-2 h-32 object-cover rounded-lg" />
+                )}
+                {uploading && <p className="text-blue-600 mt-2">กำลังอัพโหลด...</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.tag}
+                  onChange={(e) => setFormData({...formData, tag: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หมายเลขซีเรียล *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.serial}
+                  onChange={(e) => setFormData({...formData, serial: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่ *</label>
+                <select 
+                  value={formData.category}
+                  onChange={(e) => {
+                    const cat = assetCategories.find(c => c.name === e.target.value);
+                    setFormData({...formData, category: e.target.value, icon: cat?.icon || '📦'});
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {assetCategories.map(cat => (
+                    <option key={cat.id} value={cat.name}>{cat.icon} {cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">สถานที่ *</label>
+                <select 
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {departments.map(dept => <option key={dept.id}>{dept.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">สถานะ *</label>
+                <select 
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option>ใช้งาน</option>
+                  <option>ซ่อม</option>
+                  <option>เก็บคลัง</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ราคา (บาท) *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วันที่ซื้อ *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={formData.purchase_date}
+                  onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วันหมดประกัน *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={formData.warranty_expiry}
+                  onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button type="submit" disabled={uploading} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow disabled:opacity-50">
+                {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
+              </button>
+              <button type="button" onClick={() => setShowEditAssetModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300">
+                ❌ ยกเลิก
+              </button>
+            </div>
+          </form>
         </div>
-        {selectedAsset && (
-          <div className="space-y-6">
-            {selectedAsset.image_url && (
-              <img src={selectedAsset.image_url} alt={selectedAsset.name} className="w-full h-64 object-cover rounded-xl" />
-            )}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
-              <div className="flex items-center gap-4 mb-4">
-                <span className="text-5xl">{selectedAsset.icon}</span>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">{selectedAsset.name}</h3>
-                  <p className="text-gray-600">รหัส: {selectedAsset.tag}</p>
+      </div>
+    );
+  };
+
+  // Modal รายละเอียดทรัพย์สิน
+  const AssetDetailModal = () => {
+    const assetRepairs = repairHistory.filter(r => r.asset_id === selectedAsset?.id);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">รายละเอียดทรัพย์สิน</h2>
+            <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+          </div>
+          {selectedAsset && (
+            <div className="space-y-6">
+              {selectedAsset.image_url && (
+                <img src={selectedAsset.image_url} alt={selectedAsset.name} className="w-full h-64 object-cover rounded-xl" />
+              )}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-5xl">{selectedAsset.icon}</span>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">{selectedAsset.name}</h3>
+                    <p className="text-gray-600">รหัส: {selectedAsset.tag}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg font-mono text-center text-sm mb-2">
+                  {generateBarcode(selectedAsset.tag)}
+                </div>
+                <p className="text-center text-xs text-gray-600">{selectedAsset.tag}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">หมายเลขซีเรียล</p>
+                  <p className="font-semibold text-gray-900">{selectedAsset.serial}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">หมวดหมู่</p>
+                  <p className="font-semibold text-gray-900">{selectedAsset.category}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">สถานที่</p>
+                  <p className="font-semibold text-gray-900">{selectedAsset.location}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">สถานะ</p>
+                  <p className="font-semibold text-gray-900">{selectedAsset.status}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">วันที่ซื้อ</p>
+                  <p className="font-semibold text-gray-900">{selectedAsset.purchase_date}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">หมดประกัน</p>
+                  <p className="font-semibold text-gray-900">{selectedAsset.warranty_expiry}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">ราคา</p>
+                  <p className="font-semibold text-green-600">฿{selectedAsset.price}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">การรับประกันคงเหลือ</p>
+                  <p className={`font-semibold ${selectedAsset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {selectedAsset.warranty_days} วัน
+                  </p>
                 </div>
               </div>
-              <div className="bg-white p-4 rounded-lg font-mono text-center text-sm mb-2">
-                {generateBarcode(selectedAsset.tag)}
-              </div>
-              <p className="text-center text-xs text-gray-600">{selectedAsset.tag}</p>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">หมายเลขซีเรียล</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.serial}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">หมวดหมู่</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.category}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">สถานที่</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.location}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">สถานะ</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.status}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">วันที่ซื้อ</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.purchase_date}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">หมดประกัน</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.warranty_expiry}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">ราคา</p>
-                <p className="font-semibold text-green-600">฿{selectedAsset.price}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">การรับประกันคงเหลือ</p>
-                <p className={`font-semibold ${selectedAsset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {selectedAsset.warranty_days} วัน
-                </p>
-              </div>
-            </div>
+              {/* ประวัติการซ่อม */}
+              {assetRepairs.length > 0 && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-bold text-lg mb-3">🔧 ประวัติการซ่อม ({assetRepairs.length} ครั้ง)</h4>
+                  <div className="space-y-2">
+                    {assetRepairs.map((repair) => (
+                      <div key={repair.id} className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-medium text-gray-900">{repair.issue_description}</p>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' :
+                            repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {repair.repair_status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>ช่าง: {repair.technician || '-'}</p>
+                          <p>ค่าใช้จ่าย: ฿{repair.repair_cost.toLocaleString()}</p>
+                          <p>วันที่: {repair.start_date} {repair.end_date ? `- ${repair.end_date}` : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            <div className="flex gap-3">
-              <button className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center gap-2">
-                ✏️ แก้ไข
-              </button>
-              <button 
-                onClick={() => deleteAsset(selectedAsset.id)}
-                className="flex-1 bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2"
-              >
-                🗑️ ลบ
-              </button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setShowDetailModal(false); setShowEditAssetModal(true); }}
+                  className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center gap-2"
+                >
+                  ✏️ แก้ไข
+                </button>
+                <button 
+                  onClick={() => { setShowDetailModal(false); setShowAddRepairModal(true); }}
+                  className="flex-1 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 flex items-center justify-center gap-2"
+                >
+                  🔧 เพิ่มการซ่อม
+                </button>
+                <button 
+                  onClick={() => deleteAsset(selectedAsset.id)}
+                  className="flex-1 bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2"
+                >
+                  🗑️ ลบ
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Modal จัดการแผนก
   const DepartmentModal = () => {
@@ -460,9 +785,15 @@ const App = () => {
             <button onClick={() => setShowDepartmentModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
           </div>
           <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
-            {departments.map((dept, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                <span className="font-medium">{dept}</span>
+            {departments.map((dept) => (
+              <div key={dept.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="font-medium">{dept.name}</span>
+                <button 
+                  onClick={() => deleteDepartment(dept.id, dept.name)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  🗑️
+                </button>
               </div>
             ))}
           </div>
@@ -549,7 +880,195 @@ const App = () => {
     );
   };
 
-  // Modal สรุปงบหมึก
+  // Modal เพิ่มการซ่อม
+  const AddRepairModal = () => {
+    const [formData, setFormData] = useState({
+      asset_id: selectedAsset?.id || 0,
+      asset_name: selectedAsset?.name || '',
+      asset_tag: selectedAsset?.tag || '',
+      issue_description: '',
+      repair_status: 'รอดำเนินการ',
+      repair_cost: 0,
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: '',
+      technician: '',
+      notes: ''
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      addRepairHistory(formData);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">🔧 เพิ่มการซ่อม</h2>
+            <button onClick={() => setShowAddRepairModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">ทรัพย์สิน</p>
+              <p className="font-bold text-lg">{selectedAsset?.name} ({selectedAsset?.tag})</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">รายละเอียดปัญหา *</label>
+              <textarea 
+                required
+                rows={3}
+                value={formData.issue_description}
+                onChange={(e) => setFormData({...formData, issue_description: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">สถานะการซ่อม *</label>
+                <select 
+                  value={formData.repair_status}
+                  onChange={(e) => setFormData({...formData, repair_status: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option>รอดำเนินการ</option>
+                  <option>กำลังซ่อม</option>
+                  <option>เสร็จสิ้น</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ค่าใช้จ่าย (บาท)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  value={formData.repair_cost}
+                  onChange={(e) => setFormData({...formData, repair_cost: parseFloat(e.target.value)})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วันที่เริ่มซ่อม *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วันที่เสร็จสิ้น</label>
+                <input 
+                  type="date" 
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ช่างผู้รับผิดชอบ</label>
+              <input 
+                type="text" 
+                value={formData.technician}
+                onChange={(e) => setFormData({...formData, technician: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
+              <textarea 
+                rows={2}
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button type="submit" className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow">
+                ✅ บันทึก
+              </button>
+              <button type="button" onClick={() => setShowAddRepairModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300">
+                ❌ ยกเลิก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal ประวัติการซ่อมทั้งหมด
+  const RepairHistoryModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">🔧 ประวัติการซ่อมทั้งหมด</h2>
+            <p className="text-sm text-gray-500">รวม {repairHistory.length} รายการ</p>
+          </div>
+          <button onClick={() => setShowRepairHistoryModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+        </div>
+
+        <div className="space-y-3">
+          {repairHistory.map((repair) => (
+            <div key={repair.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">{repair.asset_name}</h3>
+                  <p className="text-sm text-gray-600">รหัส: {repair.asset_tag}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' :
+                  repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {repair.repair_status}
+                </span>
+              </div>
+              
+              <div className="bg-gray-50 p-3 rounded-lg mb-3">
+                <p className="text-sm font-medium text-gray-900">{repair.issue_description}</p>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500">ค่าใช้จ่าย</p>
+                  <p className="font-bold text-lg text-red-600">฿{repair.repair_cost.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">ช่าง</p>
+                  <p className="font-bold text-gray-900">{repair.technician || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">วันที่เริ่ม</p>
+                  <p className="font-bold text-gray-900">{repair.start_date}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">วันที่เสร็จ</p>
+                  <p className="font-bold text-gray-900">{repair.end_date || '-'}</p>
+                </div>
+              </div>
+
+              {repair.notes && (
+                <div className="mt-3 pt-3 border-t">
+                  <p className="text-sm text-gray-600"><strong>หมายเหตุ:</strong> {repair.notes}</p>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {repairHistory.length === 0 && (
+            <div className="text-center py-12">
+              <span className="text-6xl mb-4 block">🔧</span>
+              <p className="text-xl font-semibold text-gray-700">ไม่มีประวัติการซ่อม</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Modal สรุปงบหมึก (เหมือนเดิม)
   const InkBudgetModal = () => {
     const budgetPercent = inkBudget ? (inkBudget.total_spent / inkBudget.budget_limit) * 100 : 0;
     const budgetRemaining = inkBudget ? inkBudget.budget_limit - inkBudget.total_spent : 0;
@@ -733,6 +1252,12 @@ const App = () => {
               >
                 🖨️ สรุปงบหมึก
               </button>
+              <button 
+                onClick={() => setShowRepairHistoryModal(true)}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg rounded-lg text-sm font-medium transition-shadow"
+              >
+                🔧 ประวัติการซ่อม
+              </button>
               <button className="p-2 hover:bg-gray-100 rounded-lg">⚙️</button>
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                 AD
@@ -789,34 +1314,6 @@ const App = () => {
               ))}
             </div>
 
-            {/* Category Chart */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                📊 ทรัพย์สินแยกตามประเภท
-              </h2>
-              <div className="space-y-4">
-                {categoryData.map((cat) => (
-                  <div key={cat.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{cat.icon}</span>
-                        <span className="text-sm font-medium">{cat.name}</span>
-                      </div>
-                      <span className="text-sm text-gray-600 font-semibold">
-                        {cat.count} รายการ ({cat.percent}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-3">
-                      <div
-                        className={`${cat.color} h-3 rounded-full transition-all duration-500`}
-                        style={{ width: `${cat.percent}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Ink Budget Summary Widget */}
             {inkBudget && (
               <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
@@ -824,17 +1321,17 @@ const App = () => {
                   💰 สรุปงบหมึกพิมพ์เดือนนี้
                 </h2>
                 <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">ใช้ไปแล้ว</p>
-                    <p className="text-2xl font-bold text-blue-600">฿{inkBudget.total_spent.toLocaleString()}</p>
+                  <div className="text-center bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">ใช้ไปแล้ว</p>
+                    <p className="text-3xl font-bold text-blue-600">฿{inkBudget.total_spent.toLocaleString()}</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">งบทั้งหมด</p>
-                    <p className="text-2xl font-bold text-green-600">฿{inkBudget.budget_limit.toLocaleString()}</p>
+                  <div className="text-center bg-green-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">งบทั้งหมด</p>
+                    <p className="text-3xl font-bold text-green-600">฿{inkBudget.budget_limit.toLocaleString()}</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">คงเหลือ</p>
-                    <p className="text-2xl font-bold text-purple-600">฿{(inkBudget.budget_limit - inkBudget.total_spent).toLocaleString()}</p>
+                  <div className="text-center bg-purple-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">คงเหลือ</p>
+                    <p className="text-3xl font-bold text-purple-600">฿{(inkBudget.budget_limit - inkBudget.total_spent).toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
@@ -846,8 +1343,31 @@ const App = () => {
                 <p className="text-center text-sm text-gray-600 mt-2">
                   ใช้ไป {((inkBudget.total_spent / inkBudget.budget_limit) * 100).toFixed(1)}%
                 </p>
+                <button 
+                  onClick={() => setShowInkBudgetModal(true)}
+                  className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow"
+                >
+                  📋 ดูรายละเอียดหมึกทั้งหมด
+                </button>
               </div>
             )}
+
+            {/* Category Distribution */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                📊 ทรัพย์สินแยกตามประเภท
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {categoryData.map((cat) => (
+                  <div key={cat.id} className="bg-gray-50 p-4 rounded-lg text-center">
+                    <span className="text-4xl block mb-2">{cat.icon}</span>
+                    <p className="text-sm font-medium text-gray-700 mb-1">{cat.name}</p>
+                    <p className="text-2xl font-bold text-gray-900">{cat.count}</p>
+                    <p className="text-xs text-gray-500">{cat.percent}% ของทั้งหมด</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -962,10 +1482,13 @@ const App = () => {
 
       {/* Modals */}
       {showAddAssetModal && <AddAssetModal />}
+      {showEditAssetModal && <EditAssetModal />}
       {showDetailModal && selectedAsset && <AssetDetailModal />}
       {showDepartmentModal && <DepartmentModal />}
       {showCategoryModal && <CategoryModal />}
       {showInkBudgetModal && <InkBudgetModal />}
+      {showRepairHistoryModal && <RepairHistoryModal />}
+      {showAddRepairModal && <AddRepairModal />}
     </div>
   );
 };
