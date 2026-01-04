@@ -16,6 +16,7 @@ const App = () => {
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -1039,7 +1040,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 
 
 
-  // Profile Modal Component
   const ProfileModal = () => {
     const [editMode, setEditMode] = useState(false);
     const [profileData, setProfileData] = useState({
@@ -1092,17 +1092,14 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                 <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
                 <input type="text" disabled={!editMode} value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
                 <input type="email" disabled={!editMode} value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
                 <input type="tel" disabled={!editMode} value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
                 <input type="text" disabled={!editMode} value={profileData.position} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
@@ -1138,7 +1135,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   };
 
 
-  // Settings Modal Component
   const SettingsModal = () => {
     const [settings, setSettings] = useState({
       theme: 'light',
@@ -1164,9 +1160,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 
           <div className="space-y-6">
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                🎨 รูปแบบการแสดงผล
-              </h3>
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🎨 รูปแบบการแสดงผล</h3>
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setSettings({...settings, theme: 'light'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'light' ? 'border-blue-500 bg-white shadow-lg scale-105' : 'border-gray-200 bg-white hover:border-blue-300'}`}>
                   <div className="text-3xl mb-2">☀️</div>
@@ -1180,9 +1174,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                🌐 ภาษา
-              </h3>
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🌐 ภาษา</h3>
               <select value={settings.language} onChange={(e) => setSettings({...settings, language: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all">
                 <option value="th">🇹🇭 ไทย (Thai)</option>
                 <option value="en">🇺🇸 English</option>
@@ -1190,9 +1182,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
             </div>
 
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                🔔 การแจ้งเตือน
-              </h3>
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🔔 การแจ้งเตือน</h3>
               <div className="space-y-3">
                 <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
                   <div className="flex items-center gap-3">
@@ -1204,7 +1194,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   </div>
                   <input type="checkbox" checked={settings.notifications} onChange={(e) => setSettings({...settings, notifications: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
                 </label>
-
                 <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">📧</span>
@@ -1219,9 +1208,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
             </div>
 
             <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                🛠️ ระบบ
-              </h3>
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🛠️ ระบบ</h3>
               <div className="space-y-4">
                 <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
                   <div className="flex items-center gap-3">
@@ -1233,7 +1220,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   </div>
                   <input type="checkbox" checked={settings.autoBackup} onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})} className="w-6 h-6 text-orange-600 rounded focus:ring-2 focus:ring-orange-500" />
                 </label>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">📊 จำนวนรายการต่อหน้า</label>
                   <select value={settings.itemsPerPage} onChange={(e) => setSettings({...settings, itemsPerPage: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
