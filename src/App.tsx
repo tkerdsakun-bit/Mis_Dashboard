@@ -891,111 +891,150 @@ const App = () => {
   );
 
   const InkBudgetModal = () => {
-    const budgetPercent = inkBudget ? (inkBudget.total_spent / inkBudget.budget_limit) * 100 : 0;
-    const budgetRemaining = inkBudget ? inkBudget.budget_limit - inkBudget.total_spent : 0;
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">🖨️ สรุปงบประมาณหมึกพิมพ์</h2>
-              <p className="text-gray-500 text-sm mt-1">ภาพรวมการใช้งบหมึกพิมพ์ประจำเดือน</p>
+  // คำนวณยอดรวม
+  const totalExpense = inkTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = inkTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
+  const netAmount = totalIncome - totalExpense;
+
+  const expenseCount = inkTransactions.filter(t => t.transaction_type === 'รายจ่าย').length;
+  const incomeCount = inkTransactions.filter(t => t.transaction_type === 'รายรับ').length;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-green-600 flex items-center gap-3 mb-2">
+              💰 รายรับ-รายจ่ายหมึกเดือนนี้
+            </h2>
+            <p className="text-gray-600">ประจำเดือน {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long' })}</p>
+          </div>
+          <button onClick={() => setShowInkBudgetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl">×</button>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* รายจ่ายทั้งหมด */}
+          <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-6 border border-red-100">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-red-400 to-pink-500 p-4 rounded-2xl shadow-lg">
+                <span className="text-3xl">💸</span>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium mb-1">รายจ่ายทั้งหมด</p>
+                <p className="text-3xl font-bold text-red-600">฿{totalExpense.toLocaleString()}</p>
+                <p className="text-sm text-red-500 mt-1">{expenseCount} รายการ</p>
+              </div>
             </div>
-            <button onClick={() => setShowInkBudgetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
           </div>
 
-          {inkBudget && (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border-2 border-blue-100 shadow-lg">
-                  <p className="text-xs text-blue-600 mb-2 font-semibold">💰 ซื้อหมึกเดือนนี้</p>
-                  <p className="text-4xl font-bold text-blue-900">฿{inkBudget.total_spent.toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-100 shadow-lg">
-                  <p className="text-xs text-green-600 mb-2 font-semibold">📊 งบประมาณทั้งหมด</p>
-                  <p className="text-4xl font-bold text-green-900">฿{inkBudget.budget_limit.toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-100 shadow-lg">
-                  <p className="text-xs text-purple-600 mb-2 font-semibold">💵 งบคงเหลือ</p>
-                  <p className="text-4xl font-bold text-purple-900">฿{budgetRemaining.toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-2xl border-2 border-yellow-100 shadow-lg">
-                  <p className="text-xs text-yellow-600 mb-2 font-semibold">⚠️ หมึกใกล้หมด</p>
-                  <p className="text-4xl font-bold text-yellow-900">{inkInventory.filter(i => i.current_level < i.min_level).length} รายการ</p>
-                </div>
+          {/* รายรับทั้งหมด */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-4 rounded-2xl shadow-lg">
+                <span className="text-3xl">💵</span>
               </div>
-
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-8 rounded-2xl mb-8 border-2 border-gray-200">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-xl font-bold text-gray-900">การใช้งบประมาณเดือนนี้</span>
-                  <span className="text-3xl font-bold text-gray-900">{budgetPercent.toFixed(1)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-8 shadow-inner">
-                  <div className={`h-8 rounded-full transition-all duration-500 shadow-lg ${budgetPercent > 80 ? 'bg-gradient-to-r from-red-500 to-pink-500' : budgetPercent > 60 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`} style={{ width: `${budgetPercent}%` }}></div>
-                </div>
-                <div className="flex justify-between mt-3 text-sm font-medium">
-                  <span className="text-gray-600">ใช้ไป: ฿{inkBudget.total_spent.toLocaleString()}</span>
-                  <span className="text-gray-600">คงเหลือ: ฿{budgetRemaining.toLocaleString()}</span>
-                </div>
+              <div>
+                <p className="text-green-600 font-medium mb-1">รายรับทั้งหมด</p>
+                <p className="text-3xl font-bold text-green-600">฿{totalIncome.toLocaleString()}</p>
+                <p className="text-sm text-green-500 mt-1">{incomeCount} รายการ</p>
               </div>
-            </>
-          )}
+            </div>
+          </div>
 
-          <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            📋 รายการหมึกพิมพ์ทั้งหมด ({inkInventory.length} รายการ)
-          </h3>
-          <div className="space-y-4">
-            {inkInventory.map((ink: InkItem) => (
-              <div key={ink.id} className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 rounded-2xl p-6 hover:shadow-2xl hover:scale-[1.02] transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start gap-4">
-                    <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-xl shadow-lg">
-                      <span className="text-4xl">🖨️</span>
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-xl text-gray-900">{ink.printer_name}</h3>
-                      <p className="text-sm text-gray-600">รหัส: {ink.printer_tag}</p>
-                      <p className="text-sm font-semibold text-gray-700 mt-2">{ink.ink_type}</p>
-                    </div>
-                  </div>
-                  <span className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg ${ink.status === 'วิกฤต' ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : ink.status === 'ต่ำ' ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white' : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'}`}>
-                    {ink.status}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm mb-4">
-                  {[
-                    { label: 'ระดับหมึก', value: `${ink.current_level}%`, color: 'text-gray-900' },
-                    { label: 'คงเหลือ (วัน)', value: ink.estimated_days_left, color: ink.estimated_days_left < 10 ? 'text-red-600' : 'text-green-600' },
-                    { label: 'ราคา/หน่วย', value: `฿${ink.unit_price.toLocaleString()}`, color: 'text-gray-900' },
-                    { label: 'ใช้ต่อเดือน', value: `${ink.monthly_usage}%`, color: 'text-gray-900' },
-                    { label: 'เติมล่าสุด', value: ink.last_refill, color: 'text-gray-900' }
-                  ].map((item, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-500 mb-1 text-xs">{item.label}</p>
-                      <p className={`font-bold text-lg ${item.color}`}>{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mb-2">
-                  <div className="w-full bg-gray-200 rounded-full h-4 relative shadow-inner">
-                    <div className={`h-4 rounded-full transition-all duration-500 shadow-lg ${ink.current_level < ink.min_level ? 'bg-gradient-to-r from-red-500 to-pink-500' : ink.current_level < 50 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-gradient-to-r from-green-500 to-emerald-500'}`} style={{ width: `${ink.current_level}%` }}></div>
-                    <div className="absolute top-0 bottom-0 w-1 bg-red-700 shadow-lg" style={{ left: `${ink.min_level}%` }}></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-2 font-medium">
-                    <span>0%</span>
-                    <span>ขั้นต่ำ: {ink.min_level}%</span>
-                    <span>100%</span>
-                  </div>
-                </div>
+          {/* ยอดสุทธิ */}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-4 rounded-2xl shadow-lg">
+                <span className="text-3xl">📊</span>
               </div>
-            ))}
+              <div>
+                <p className="text-orange-600 font-medium mb-1">ยอดสุทธิ</p>
+                <p className={`text-3xl font-bold ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                  {netAmount >= 0 ? '+' : ''}฿{Math.abs(netAmount).toLocaleString()}
+                </p>
+                <p className="text-sm text-orange-500 mt-1">{netAmount >= 0 ? 'กำไร' : 'ขาดทุน'}</p>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Add Transaction Button */}
+        <button
+          onClick={() => {
+            setShowInkBudgetModal(false);
+            setShowInkTransactionModal(true);
+          }}
+          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-2xl font-semibold text-lg mb-6 hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"
+        >
+          <span className="text-2xl">+</span> เพิ่มรายการใหม่
+        </button>
+
+        {/* Transaction List */}
+        <div className="space-y-3">
+          {inkTransactions.length > 0 ? (
+            inkTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className={`${
+                  transaction.transaction_type === 'รายจ่าย' 
+                    ? 'bg-gradient-to-r from-red-50 to-pink-50 border-red-100' 
+                    : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-100'
+                } border rounded-2xl p-5 transition-all duration-300 hover:shadow-lg`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`${
+                      transaction.transaction_type === 'รายจ่าย' 
+                        ? 'bg-gradient-to-br from-red-400 to-pink-500' 
+                        : 'bg-gradient-to-br from-green-400 to-emerald-500'
+                    } p-3 rounded-xl shadow-md`}>
+                      <span className="text-2xl">{transaction.transaction_type === 'รายจ่าย' ? '💸' : '💵'}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`${
+                          transaction.transaction_type === 'รายจ่าย' ? 'text-red-600' : 'text-green-600'
+                        } font-semibold text-sm px-3 py-1 rounded-full ${
+                          transaction.transaction_type === 'รายจ่าย' ? 'bg-red-100' : 'bg-green-100'
+                        }`}>
+                          {transaction.transaction_type}
+                        </span>
+                        <span className="text-gray-500 text-sm">{transaction.category}</span>
+                      </div>
+                      <p className="font-semibold text-gray-800 text-lg">{transaction.description}</p>
+                      <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                        📅 {new Date(transaction.transaction_date).toLocaleDateString('th-TH', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-bold ${
+                      transaction.transaction_type === 'รายจ่าย' ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {transaction.transaction_type === 'รายจ่าย' ? '-' : '+'}฿{transaction.amount.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">ยังไม่มีรายการในเดือนนี้</p>
+              <p className="text-gray-300 text-sm mt-2">คลิกปุ่มด้านบนเพื่อเพิ่มรายการใหม่</p>
+            </div>
+          )}
+        </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
+
 
   if (loading) {
     return (
