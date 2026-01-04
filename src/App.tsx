@@ -14,6 +14,8 @@ const App = () => {
   const [showAddRepairModal, setShowAddRepairModal] = useState<boolean>(false);
   const [showInkTransactionModal, setShowInkTransactionModal] = useState<boolean>(false);
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
+  const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -1036,6 +1038,228 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 };
 
 
+
+  // Profile Modal Component
+  const ProfileModal = () => {
+    const [editMode, setEditMode] = useState(false);
+    const [profileData, setProfileData] = useState({
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: '099-999-9999',
+      position: 'IT Administrator',
+      department: currentUser.department,
+      bio: 'ผู้ดูแลระบบจัดการทรัพย์สินไอที'
+    });
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
+                👤 โปรไฟล์ของฉัน
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">จัดการข้อมูลส่วนตัวของคุณ</p>
+            </div>
+            <button onClick={() => setShowProfileModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">×</button>
+          </div>
+
+          <div className="flex flex-col items-center mb-8">
+            <div className="relative">
+              <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-6xl shadow-xl">
+                👤
+              </div>
+              <button className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110">
+                📷
+              </button>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mt-4">{profileData.name}</h3>
+            <p className="text-gray-500">{profileData.position}</p>
+            <span className="mt-2 px-4 py-1 bg-blue-100 text-blue-700 text-sm rounded-full font-semibold">
+              {currentUser.role}
+            </span>
+          </div>
+
+          <div className="space-y-5">
+            <div className="flex justify-end">
+              <button onClick={() => setEditMode(!editMode)} className={`px-6 py-2 rounded-xl font-semibold transition-all ${editMode ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl'}`}>
+                {editMode ? '❌ ยกเลิก' : '✏️ แก้ไขข้อมูล'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
+                <input type="text" disabled={!editMode} value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
+                <input type="email" disabled={!editMode} value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
+                <input type="tel" disabled={!editMode} value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
+                <input type="text" disabled={!editMode} value={profileData.position} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 แผนก</label>
+              <select disabled={!editMode} value={profileData.department} onChange={(e) => setProfileData({...profileData, department: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed">
+                {departments.map(dept => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📝 เกี่ยวกับฉัน</label>
+              <textarea rows={3} disabled={!editMode} value={profileData.bio} onChange={(e) => setProfileData({...profileData, bio: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+            </div>
+
+            {editMode && (
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => { alert('✅ บันทึกข้อมูลสำเร็จ!\n(นี่คือ Demo - ไม่มีการบันทึกจริง)'); setEditMode(false); }} className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
+                  💾 บันทึกข้อมูล
+                </button>
+                <button onClick={() => setEditMode(false)} className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all">
+                  ยกเลิก
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  // Settings Modal Component
+  const SettingsModal = () => {
+    const [settings, setSettings] = useState({
+      theme: 'light',
+      language: 'th',
+      notifications: true,
+      emailNotif: true,
+      autoBackup: false,
+      itemsPerPage: '20'
+    });
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-3">
+                ⚙️ ตั้งค่าระบบ
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">ปรับแต่งการใช้งานตามที่คุณต้องการ</p>
+            </div>
+            <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">×</button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                🎨 รูปแบบการแสดงผล
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setSettings({...settings, theme: 'light'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'light' ? 'border-blue-500 bg-white shadow-lg scale-105' : 'border-gray-200 bg-white hover:border-blue-300'}`}>
+                  <div className="text-3xl mb-2">☀️</div>
+                  <div className="font-semibold">สว่าง (Light)</div>
+                </button>
+                <button onClick={() => setSettings({...settings, theme: 'dark'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'dark' ? 'border-blue-500 bg-gray-800 text-white shadow-lg scale-105' : 'border-gray-200 bg-gray-800 text-white hover:border-blue-300'}`}>
+                  <div className="text-3xl mb-2">🌙</div>
+                  <div className="font-semibold">มืด (Dark)</div>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                🌐 ภาษา
+              </h3>
+              <select value={settings.language} onChange={(e) => setSettings({...settings, language: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all">
+                <option value="th">🇹🇭 ไทย (Thai)</option>
+                <option value="en">🇺🇸 English</option>
+              </select>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                🔔 การแจ้งเตือน
+              </h3>
+              <div className="space-y-3">
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔔</span>
+                    <div>
+                      <div className="font-semibold text-gray-900">แจ้งเตือนในระบบ</div>
+                      <div className="text-sm text-gray-500">แสดงการแจ้งเตือนทั่วไป</div>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={settings.notifications} onChange={(e) => setSettings({...settings, notifications: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                </label>
+
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📧</span>
+                    <div>
+                      <div className="font-semibold text-gray-900">อีเมลแจ้งเตือน</div>
+                      <div className="text-sm text-gray-500">ส่งการแจ้งเตือนไปอีเมล</div>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={settings.emailNotif} onChange={(e) => setSettings({...settings, emailNotif: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                🛠️ ระบบ
+              </h3>
+              <div className="space-y-4">
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">💾</span>
+                    <div>
+                      <div className="font-semibold text-gray-900">สำรองข้อมูลอัตโนมัติ</div>
+                      <div className="text-sm text-gray-500">สำรองข้อมูลทุกวัน</div>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={settings.autoBackup} onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})} className="w-6 h-6 text-orange-600 rounded focus:ring-2 focus:ring-orange-500" />
+                </label>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">📊 จำนวนรายการต่อหน้า</label>
+                  <select value={settings.itemsPerPage} onChange={(e) => setSettings({...settings, itemsPerPage: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
+                    <option value="10">10 รายการ</option>
+                    <option value="20">20 รายการ</option>
+                    <option value="50">50 รายการ</option>
+                    <option value="100">100 รายการ</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button onClick={() => { alert('✅ บันทึกการตั้งค่าสำเร็จ!\n(นี่คือ Demo - ไม่มีการบันทึกจริง)'); setShowSettingsModal(false); }} className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
+                💾 บันทึกการตั้งค่า
+              </button>
+              <button onClick={() => setShowSettingsModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -1401,6 +1625,8 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       {showAddRepairModal && <AddRepairModal />}
       {showRepairHistoryModal && <RepairHistoryModal />}
       {showInkTransactionModal && <InkTransactionModal />}
+      {showProfileModal && <ProfileModal />}
+      {showSettingsModal && <SettingsModal />}
       {showAddTransactionModal && <AddTransactionModal />}
       {showInkBudgetModal && <InkBudgetModal />}
     </div>
