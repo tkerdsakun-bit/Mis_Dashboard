@@ -1773,4 +1773,3 @@ const App = () => {
 };
 
 export default App;
-value)} className="w-full pl-14 pr-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue
