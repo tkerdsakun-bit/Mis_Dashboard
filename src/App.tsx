@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Asset, InkItem, Department } from './supabaseClient';
+import { supabase } from './supabaseClient';
+import type { Asset, InkItem } from './supabaseClient';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
@@ -18,22 +19,22 @@ const App = () => {
   const [departments, setDepartments] = useState<string[]>([]);
   const [inkInventory, setInkInventory] = useState<InkItem[]>([]);
 
-  // Stats
+  // Stats - Fixed type inference
   const stats = [
     { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'bg-blue-500' },
-    { icon: '⚠️', label: 'การรับประกันใกล้หมด', value: assets.filter(a => a.warranty_days < 30).length.toString(), color: 'bg-yellow-500' },
-    { icon: '🔧', label: 'อยู่ระหว่างซ่อม', value: assets.filter(a => a.status === 'ซ่อม').length.toString(), color: 'bg-red-500' },
-    { icon: '💰', label: 'มูลค่ารวม', value: `฿${(assets.reduce((sum, a) => sum + parseFloat(a.price.replace(/,/g, '')), 0) / 1000000).toFixed(1)}M`, color: 'bg-green-500' },
+    { icon: '⚠️', label: 'การรับประกันใกล้หมด', value: assets.filter((asset: Asset) => asset.warranty_days < 30).length.toString(), color: 'bg-yellow-500' },
+    { icon: '🔧', label: 'อยู่ระหว่างซ่อม', value: assets.filter((asset: Asset) => asset.status === 'ซ่อม').length.toString(), color: 'bg-red-500' },
+    { icon: '💰', label: 'มูลค่ารวม', value: `฿${(assets.reduce((sum, asset: Asset) => sum + parseFloat(asset.price.replace(/,/g, '')), 0) / 1000000).toFixed(1)}M`, color: 'bg-green-500' },
     { icon: '🏢', label: 'แผนกทั้งหมด', value: departments.length.toString(), color: 'bg-purple-500' },
     { icon: '🗑️', label: 'ทรัพย์สินที่ตัดจำหน่าย', value: '0', color: 'bg-gray-500' }
   ];
 
   const categoryData = [
-    { icon: '💻', name: 'คอมพิวเตอร์', count: assets.filter(a => a.category === 'คอมพิวเตอร์').length, color: 'bg-blue-500' },
-    { icon: '💼', name: 'โน้ตบุ๊ค', count: assets.filter(a => a.category === 'โน้ตบุ๊ค').length, color: 'bg-indigo-500' },
-    { icon: '🖥️', name: 'จอมอนิเตอร์', count: assets.filter(a => a.category === 'จอมอนิเตอร์').length, color: 'bg-purple-500' },
-    { icon: '🖨️', name: 'เครื่องพิมพ์', count: assets.filter(a => a.category === 'เครื่องพิมพ์').length, color: 'bg-pink-500' },
-    { icon: '📡', name: 'อุปกรณ์เครือข่าย', count: assets.filter(a => a.category === 'อุปกรณ์เครือข่าย').length, color: 'bg-green-500' }
+    { icon: '💻', name: 'คอมพิวเตอร์', count: assets.filter((asset: Asset) => asset.category === 'คอมพิวเตอร์').length, color: 'bg-blue-500' },
+    { icon: '💼', name: 'โน้ตบุ๊ค', count: assets.filter((asset: Asset) => asset.category === 'โน้ตบุ๊ค').length, color: 'bg-indigo-500' },
+    { icon: '🖥️', name: 'จอมอนิเตอร์', count: assets.filter((asset: Asset) => asset.category === 'จอมอนิเตอร์').length, color: 'bg-purple-500' },
+    { icon: '🖨️', name: 'เครื่องพิมพ์', count: assets.filter((asset: Asset) => asset.category === 'เครื่องพิมพ์').length, color: 'bg-pink-500' },
+    { icon: '📡', name: 'อุปกรณ์เครือข่าย', count: assets.filter((asset: Asset) => asset.category === 'อุปกรณ์เครือข่าย').length, color: 'bg-green-500' }
   ].map(cat => ({
     ...cat,
     percent: assets.length > 0 ? Math.round((cat.count / assets.length) * 100) : 0
@@ -43,18 +44,19 @@ const App = () => {
   const inkBudgetStats = {
     totalSpentThisMonth: 8950,
     budgetLimit: 15000,
-    lowStockItems: inkInventory.filter(i => i.current_level < i.min_level && i.status !== 'วิกฤต').length,
-    criticalItems: inkInventory.filter(i => i.status === 'วิกฤต').length,
+    lowStockItems: inkInventory.filter((ink: InkItem) => ink.current_level < ink.min_level && ink.status !== 'วิกฤต').length,
+    criticalItems: inkInventory.filter((ink: InkItem) => ink.status === 'วิกฤต').length,
     estimatedNextMonthCost: 5600
   };
 
   // Fetch data from Supabase
   useEffect(() => {
     fetchAllData();
-    setupRealtimeSubscriptions();
+    const cleanup = setupRealtimeSubscriptions();
+    return cleanup;
   }, []);
 
-  const fetchAllData = async () => {
+  const fetchAllData = async (): Promise<void> => {
     try {
       setLoading(true);
 
@@ -66,12 +68,7 @@ const App = () => {
 
       if (assetsError) throw assetsError;
       if (assetsData) {
-        setAssets(assetsData.map(asset => ({
-          ...asset,
-          purchaseDate: asset.purchase_date,
-          warrantyExpiry: asset.warranty_expiry,
-          warrantyDays: asset.warranty_days
-        })));
+        setAssets(assetsData as Asset[]);
       }
 
       // Fetch departments
@@ -82,7 +79,7 @@ const App = () => {
 
       if (deptsError) throw deptsError;
       if (deptsData) {
-        setDepartments(deptsData.map(d => d.name));
+        setDepartments(deptsData.map((d: { name: string }) => d.name));
       }
 
       // Fetch ink inventory
@@ -93,19 +90,7 @@ const App = () => {
 
       if (inkError) throw inkError;
       if (inkData) {
-        setInkInventory(inkData.map(ink => ({
-          ...ink,
-          printerName: ink.printer_name,
-          printerTag: ink.printer_tag,
-          inkType: ink.ink_type,
-          currentLevel: ink.current_level,
-          minLevel: ink.min_level,
-          maxLevel: ink.max_level,
-          unitPrice: ink.unit_price,
-          lastRefill: ink.last_refill,
-          estimatedDaysLeft: ink.estimated_days_left,
-          monthlyUsage: ink.monthly_usage
-        })));
+        setInkInventory(inkData as InkItem[]);
       }
 
     } catch (error) {
@@ -123,7 +108,7 @@ const App = () => {
       .channel('assets-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'assets' },
-        (payload) => {
+        (payload: unknown) => {
           console.log('Assets change:', payload);
           fetchAllData();
         }
@@ -135,7 +120,7 @@ const App = () => {
       .channel('ink-changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'ink_inventory' },
-        (payload) => {
+        (payload: unknown) => {
           console.log('Ink change:', payload);
           fetchAllData();
         }
@@ -150,7 +135,7 @@ const App = () => {
   };
 
   // Add new asset to Supabase
-  const addAsset = async (assetData: Partial<Asset>) => {
+  const addAsset = async (assetData: Partial<Asset>): Promise<void> => {
     try {
       const { error } = await supabase
         .from('assets')
@@ -167,26 +152,8 @@ const App = () => {
     }
   };
 
-  // Update asset
-  const updateAsset = async (id: number, updates: Partial<Asset>) => {
-    try {
-      const { error } = await supabase
-        .from('assets')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      alert('✅ อัพเดทสำเร็จ');
-      fetchAllData();
-    } catch (error) {
-      console.error('Error updating asset:', error);
-      alert('❌ เกิดข้อผิดพลาดในการอัพเดท');
-    }
-  };
-
   // Delete asset
-  const deleteAsset = async (id: number) => {
+  const deleteAsset = async (id: number): Promise<void> => {
     if (!confirm('ต้องการลบทรัพย์สินนี้หรือไม่?')) return;
 
     try {
@@ -207,7 +174,7 @@ const App = () => {
   };
 
   // Add department
-  const addDepartment = async (name: string) => {
+  const addDepartment = async (name: string): Promise<void> => {
     try {
       const { error } = await supabase
         .from('departments')
@@ -223,7 +190,7 @@ const App = () => {
   };
 
   // Filter assets
-  const filteredAssets = assets.filter(asset => {
+  const filteredAssets = assets.filter((asset: Asset) => {
     const matchSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        asset.tag.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCategory = filterCategory === 'ทั้งหมด' || asset.category === filterCategory;
@@ -240,7 +207,7 @@ const App = () => {
   const exportToExcel = (): void => {
     const csvContent = [
       ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานที่', 'สถานะ', 'วันที่ซื้อ', 'ราคา'],
-      ...assets.map(a => [a.tag, a.name, a.serial, a.category, a.location, a.status, a.purchase_date, a.price])
+      ...assets.map((a: Asset) => [a.tag, a.name, a.serial, a.category, a.location, a.status, a.purchase_date, a.price])
     ].map(row => row.join(',')).join('\n');
     
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -254,7 +221,7 @@ const App = () => {
   const exportInkBudget = (): void => {
     const csvContent = [
       ['เครื่องพิมพ์', 'รหัส', 'ประเภทหมึก', 'ระดับปัจจุบัน%', 'ราคา/หน่วย', 'วันที่เติมล่าสุด', 'คงเหลือ(วัน)', 'สถานะ'],
-      ...inkInventory.map(i => [i.printer_name, i.printer_tag, i.ink_type, i.current_level, i.unit_price, i.last_refill, i.estimated_days_left, i.status])
+      ...inkInventory.map((i: InkItem) => [i.printer_name, i.printer_tag, i.ink_type, i.current_level, i.unit_price, i.last_refill, i.estimated_days_left, i.status])
     ].map(row => row.join(',')).join('\n');
     
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -517,7 +484,7 @@ const App = () => {
     );
   };
 
-  // Ink Budget Modal
+  // Ink Budget Modal (continuing from previous - same code but properly typed)
   const InkBudgetModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
@@ -572,9 +539,9 @@ const App = () => {
           </p>
         </div>
 
-        {/* Ink Inventory Table */}
+        {/* Ink Inventory List */}
         <div className="space-y-3">
-          {inkInventory.map((ink) => (
+          {inkInventory.map((ink: InkItem) => (
             <div key={ink.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-3">
@@ -853,7 +820,7 @@ const App = () => {
 
             {/* Assets List */}
             <div className="space-y-4">
-              {filteredAssets.map((asset) => (
+              {filteredAssets.map((asset: Asset) => (
                 <div key={asset.id} className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-lg transition-shadow">
                   <div className="flex items-start gap-4 mb-4">
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
