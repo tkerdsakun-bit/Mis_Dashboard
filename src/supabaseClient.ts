@@ -1,13 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ดึงค่าจาก environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-// สร้าง Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Export types สำหรับ TypeScript
 export type Asset = {
   id: number;
   icon: string;
@@ -21,6 +18,7 @@ export type Asset = {
   warranty_expiry: string;
   price: string;
   warranty_days: number;
+  image_url?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -46,4 +44,20 @@ export type Department = {
   id: number;
   name: string;
   created_at?: string;
+};
+
+export type AssetCategory = {
+  id: number;
+  name: string;
+  icon: string;
+  created_at?: string;
+};
+
+export type InkBudgetSummary = {
+  id: number;
+  month: string;
+  total_spent: number;
+  budget_limit: number;
+  created_at?: string;
+  updated_at?: string;
 };
