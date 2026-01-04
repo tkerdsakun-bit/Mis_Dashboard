@@ -1,139 +1,225 @@
-import React, { useState } from 'react';
-
-// ไม่ต้อง import lucide-react, react-barcode, xlsx ก่อน
-// จะใช้ emoji และ HTML แทนชั่วคราว
+import { useState, useEffect } from 'react';
+import { supabase, Asset, InkItem, Department } from './supabaseClient';
 
 const App = () => {
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
-  const [showInkBudgetModal, setShowInkBudgetModal] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('ทั้งหมด');
-  const [filterStatus, setFilterStatus] = useState('ทั้งหมด');
+  const [currentPage, setCurrentPage] = useState<string>('dashboard');
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+  const [showDepartmentModal, setShowDepartmentModal] = useState<boolean>(false);
+  const [showInkBudgetModal, setShowInkBudgetModal] = useState<boolean>(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
+  const [filterStatus, setFilterStatus] = useState<string>('ทั้งหมด');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // State with Supabase types
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [inkInventory, setInkInventory] = useState<InkItem[]>([]);
 
   // Stats
   const stats = [
-    { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: '248', color: 'bg-blue-500' },
-    { icon: '⚠️', label: 'การรับประกันใกล้หมด', value: '12', color: 'bg-yellow-500' },
-    { icon: '🔧', label: 'อยู่ระหว่างซ่อม', value: '8', color: 'bg-red-500' },
-    { icon: '💰', label: 'มูลค่ารวม', value: '฿2.4M', color: 'bg-green-500' },
-    { icon: '🏢', label: 'แผนกทั้งหมด', value: '5', color: 'bg-purple-500' },
-    { icon: '🗑️', label: 'ทรัพย์สินที่ตัดจำหน่าย', value: '35', color: 'bg-gray-500' }
+    { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'bg-blue-500' },
+    { icon: '⚠️', label: 'การรับประกันใกล้หมด', value: assets.filter(a => a.warranty_days < 30).length.toString(), color: 'bg-yellow-500' },
+    { icon: '🔧', label: 'อยู่ระหว่างซ่อม', value: assets.filter(a => a.status === 'ซ่อม').length.toString(), color: 'bg-red-500' },
+    { icon: '💰', label: 'มูลค่ารวม', value: `฿${(assets.reduce((sum, a) => sum + parseFloat(a.price.replace(/,/g, '')), 0) / 1000000).toFixed(1)}M`, color: 'bg-green-500' },
+    { icon: '🏢', label: 'แผนกทั้งหมด', value: departments.length.toString(), color: 'bg-purple-500' },
+    { icon: '🗑️', label: 'ทรัพย์สินที่ตัดจำหน่าย', value: '0', color: 'bg-gray-500' }
   ];
 
   const categoryData = [
-    { icon: '💻', name: 'คอมพิวเตอร์', count: 85, percent: 34, color: 'bg-blue-500' },
-    { icon: '💼', name: 'โน้ตบุ๊ค', count: 62, percent: 25, color: 'bg-indigo-500' },
-    { icon: '🖥️', name: 'จอมอนิเตอร์', count: 48, percent: 19, color: 'bg-purple-500' },
-    { icon: '🖨️', name: 'เครื่องพิมพ์', count: 28, percent: 11, color: 'bg-pink-500' },
-    { icon: '📡', name: 'อุปกรณ์เครือข่าย', count: 25, percent: 10, color: 'bg-green-500' }
-  ];
-
-  const [assets, setAssets] = useState([
-    {
-      id: 1,
-      icon: '💻',
-      name: 'Dell Optiplex 7090',
-      tag: 'IT-2023-001',
-      serial: 'ABC123456789',
-      category: 'คอมพิวเตอร์',
-      location: 'ฝ่ายไอที',
-      status: 'ใช้งาน',
-      purchaseDate: '15/01/2023',
-      warrantyExpiry: '15/01/2026',
-      price: '35,000',
-      warrantyDays: 15
-    },
-    {
-      id: 2,
-      icon: '💼',
-      name: 'MacBook Pro M3',
-      tag: 'IT-2024-025',
-      serial: 'MBP202400125',
-      category: 'โน้ตบุ๊ค',
-      location: 'ฝ่ายขาย',
-      status: 'ใช้งาน',
-      purchaseDate: '10/03/2024',
-      warrantyExpiry: '10/03/2027',
-      price: '89,900',
-      warrantyDays: 800
-    },
-    {
-      id: 3,
-      icon: '🖨️',
-      name: 'HP LaserJet Pro MFP M428',
-      tag: 'IT-2023-045',
-      serial: 'HPM428-789456',
-      category: 'เครื่องพิมพ์',
-      location: 'ฝ่ายบัญชี',
-      status: 'ซ่อม',
-      purchaseDate: '20/06/2023',
-      warrantyExpiry: '20/06/2026',
-      price: '28,500',
-      warrantyDays: 22
-    }
-  ]);
-
-  const [departments, setDepartments] = useState([
-    'ฝ่ายไอที', 'ฝ่ายขาย', 'ฝ่ายบัญชี', 'ฝ่ายการตลาด', 'ฝ่ายบริหาร'
-  ]);
-
-  // Ink & Toner Budget Tracking
-  const [inkInventory, setInkInventory] = useState([
-    {
-      id: 1,
-      printerName: 'HP LaserJet Pro MFP M428',
-      printerTag: 'IT-2023-045',
-      inkType: 'Toner Cartridge HP 30A (Black)',
-      currentLevel: 35,
-      minLevel: 20,
-      maxLevel: 100,
-      unitPrice: 1850,
-      lastRefill: '15/12/2025',
-      estimatedDaysLeft: 18,
-      monthlyUsage: 2.5,
-      status: 'ต่ำ'
-    },
-    {
-      id: 2,
-      printerName: 'Canon PIXMA G7070',
-      printerTag: 'IT-2024-089',
-      inkType: 'Ink Tank GI-790 (Cyan)',
-      currentLevel: 78,
-      minLevel: 15,
-      maxLevel: 100,
-      unitPrice: 350,
-      lastRefill: '28/11/2025',
-      estimatedDaysLeft: 45,
-      monthlyUsage: 1.8,
-      status: 'ปกติ'
-    },
-    {
-      id: 3,
-      printerName: 'Epson L15160',
-      printerTag: 'IT-2023-112',
-      inkType: 'Ink Bottle 774 (Black)',
-      currentLevel: 12,
-      minLevel: 20,
-      maxLevel: 100,
-      unitPrice: 420,
-      lastRefill: '05/12/2025',
-      estimatedDaysLeft: 8,
-      monthlyUsage: 3.2,
-      status: 'วิกฤต'
-    }
-  ]);
+    { icon: '💻', name: 'คอมพิวเตอร์', count: assets.filter(a => a.category === 'คอมพิวเตอร์').length, color: 'bg-blue-500' },
+    { icon: '💼', name: 'โน้ตบุ๊ค', count: assets.filter(a => a.category === 'โน้ตบุ๊ค').length, color: 'bg-indigo-500' },
+    { icon: '🖥️', name: 'จอมอนิเตอร์', count: assets.filter(a => a.category === 'จอมอนิเตอร์').length, color: 'bg-purple-500' },
+    { icon: '🖨️', name: 'เครื่องพิมพ์', count: assets.filter(a => a.category === 'เครื่องพิมพ์').length, color: 'bg-pink-500' },
+    { icon: '📡', name: 'อุปกรณ์เครือข่าย', count: assets.filter(a => a.category === 'อุปกรณ์เครือข่าย').length, color: 'bg-green-500' }
+  ].map(cat => ({
+    ...cat,
+    percent: assets.length > 0 ? Math.round((cat.count / assets.length) * 100) : 0
+  }));
 
   // Ink Budget Summary
   const inkBudgetStats = {
     totalSpentThisMonth: 8950,
     budgetLimit: 15000,
-    lowStockItems: 2,
-    criticalItems: 1,
+    lowStockItems: inkInventory.filter(i => i.current_level < i.min_level && i.status !== 'วิกฤต').length,
+    criticalItems: inkInventory.filter(i => i.status === 'วิกฤต').length,
     estimatedNextMonthCost: 5600
+  };
+
+  // Fetch data from Supabase
+  useEffect(() => {
+    fetchAllData();
+    setupRealtimeSubscriptions();
+  }, []);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch assets
+      const { data: assetsData, error: assetsError } = await supabase
+        .from('assets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (assetsError) throw assetsError;
+      if (assetsData) {
+        setAssets(assetsData.map(asset => ({
+          ...asset,
+          purchaseDate: asset.purchase_date,
+          warrantyExpiry: asset.warranty_expiry,
+          warrantyDays: asset.warranty_days
+        })));
+      }
+
+      // Fetch departments
+      const { data: deptsData, error: deptsError } = await supabase
+        .from('departments')
+        .select('name')
+        .order('name');
+
+      if (deptsError) throw deptsError;
+      if (deptsData) {
+        setDepartments(deptsData.map(d => d.name));
+      }
+
+      // Fetch ink inventory
+      const { data: inkData, error: inkError } = await supabase
+        .from('ink_inventory')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (inkError) throw inkError;
+      if (inkData) {
+        setInkInventory(inkData.map(ink => ({
+          ...ink,
+          printerName: ink.printer_name,
+          printerTag: ink.printer_tag,
+          inkType: ink.ink_type,
+          currentLevel: ink.current_level,
+          minLevel: ink.min_level,
+          maxLevel: ink.max_level,
+          unitPrice: ink.unit_price,
+          lastRefill: ink.last_refill,
+          estimatedDaysLeft: ink.estimated_days_left,
+          monthlyUsage: ink.monthly_usage
+        })));
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      alert('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Setup real-time subscriptions
+  const setupRealtimeSubscriptions = () => {
+    // Assets real-time subscription
+    const assetsChannel = supabase
+      .channel('assets-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'assets' },
+        (payload) => {
+          console.log('Assets change:', payload);
+          fetchAllData();
+        }
+      )
+      .subscribe();
+
+    // Ink inventory real-time subscription
+    const inkChannel = supabase
+      .channel('ink-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'ink_inventory' },
+        (payload) => {
+          console.log('Ink change:', payload);
+          fetchAllData();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      supabase.removeChannel(assetsChannel);
+      supabase.removeChannel(inkChannel);
+    };
+  };
+
+  // Add new asset to Supabase
+  const addAsset = async (assetData: Partial<Asset>) => {
+    try {
+      const { error } = await supabase
+        .from('assets')
+        .insert([assetData]);
+
+      if (error) throw error;
+      
+      alert('✅ เพิ่มทรัพย์สินสำเร็จ');
+      setShowAddModal(false);
+      fetchAllData();
+    } catch (error) {
+      console.error('Error adding asset:', error);
+      alert('❌ เกิดข้อผิดพลาดในการเพิ่มทรัพย์สิน');
+    }
+  };
+
+  // Update asset
+  const updateAsset = async (id: number, updates: Partial<Asset>) => {
+    try {
+      const { error } = await supabase
+        .from('assets')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      alert('✅ อัพเดทสำเร็จ');
+      fetchAllData();
+    } catch (error) {
+      console.error('Error updating asset:', error);
+      alert('❌ เกิดข้อผิดพลาดในการอัพเดท');
+    }
+  };
+
+  // Delete asset
+  const deleteAsset = async (id: number) => {
+    if (!confirm('ต้องการลบทรัพย์สินนี้หรือไม่?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('assets')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      alert('✅ ลบสำเร็จ');
+      setShowDetailModal(false);
+      fetchAllData();
+    } catch (error) {
+      console.error('Error deleting asset:', error);
+      alert('❌ เกิดข้อผิดพลาดในการลบ');
+    }
+  };
+
+  // Add department
+  const addDepartment = async (name: string) => {
+    try {
+      const { error } = await supabase
+        .from('departments')
+        .insert([{ name }]);
+
+      if (error) throw error;
+      
+      fetchAllData();
+    } catch (error) {
+      console.error('Error adding department:', error);
+      alert('❌ เกิดข้อผิดพลาดในการเพิ่มแผนก');
+    }
   };
 
   // Filter assets
@@ -145,102 +231,167 @@ const App = () => {
     return matchSearch && matchCategory && matchStatus;
   });
 
-  // Generate simple barcode (text representation)
-  const generateBarcode = (code) => {
+  // Generate barcode
+  const generateBarcode = (code: string): string => {
     return `|||  | || ||| || |  ||| | ||  ${code}`;
   };
 
-  // Export to "Excel" (CSV format)
-  const exportToExcel = () => {
+  // Export to CSV
+  const exportToExcel = (): void => {
     const csvContent = [
       ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานที่', 'สถานะ', 'วันที่ซื้อ', 'ราคา'],
-      ...assets.map(a => [a.tag, a.name, a.serial, a.category, a.location, a.status, a.purchaseDate, a.price])
+      ...assets.map(a => [a.tag, a.name, a.serial, a.category, a.location, a.status, a.purchase_date, a.price])
     ].map(row => row.join(',')).join('\n');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'assets_export.csv';
+    link.download = `assets_export_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
   // Export Ink Budget Report
-  const exportInkBudget = () => {
+  const exportInkBudget = (): void => {
     const csvContent = [
       ['เครื่องพิมพ์', 'รหัส', 'ประเภทหมึก', 'ระดับปัจจุบัน%', 'ราคา/หน่วย', 'วันที่เติมล่าสุด', 'คงเหลือ(วัน)', 'สถานะ'],
-      ...inkInventory.map(i => [i.printerName, i.printerTag, i.inkType, i.currentLevel, i.unitPrice, i.lastRefill, i.estimatedDaysLeft, i.status])
+      ...inkInventory.map(i => [i.printer_name, i.printer_tag, i.ink_type, i.current_level, i.unit_price, i.last_refill, i.estimated_days_left, i.status])
     ].map(row => row.join(',')).join('\n');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'ink_budget_report.csv';
+    link.download = `ink_budget_report_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
   // Add Asset Modal Component
-  const AddAssetModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">เพิ่มทรัพย์สินใหม่</h2>
-          <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+  const AddAssetModal = () => {
+    const [formData, setFormData] = useState({
+      name: '',
+      tag: '',
+      serial: '',
+      category: 'คอมพิวเตอร์',
+      location: departments[0] || '',
+      price: '',
+      purchase_date: '',
+      warranty_expiry: '',
+      icon: '💻',
+      status: 'ใช้งาน',
+      warranty_days: 365
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      addAsset(formData);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">เพิ่มทรัพย์สินใหม่</h2>
+            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.tag}
+                  onChange={(e) => setFormData({...formData, tag: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หมายเลขซีเรียล *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.serial}
+                  onChange={(e) => setFormData({...formData, serial: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่ *</label>
+                <select 
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option>คอมพิวเตอร์</option>
+                  <option>โน้ตบุ๊ค</option>
+                  <option>จอมอนิเตอร์</option>
+                  <option>เครื่องพิมพ์</option>
+                  <option>อุปกรณ์เครือข่าย</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">สถานที่ *</label>
+                <select 
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {departments.map(dept => <option key={dept}>{dept}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ราคา (บาท) *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วันที่ซื้อ *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={formData.purchase_date}
+                  onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วันหมดประกัน *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={formData.warranty_expiry}
+                  onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow">
+                ✅ บันทึก
+              </button>
+              <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300">
+                ❌ ยกเลิก
+              </button>
+            </div>
+          </form>
         </div>
-        <form className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อทรัพย์สิน</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">รหัสทรัพย์สิน</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">หมายเลขซีเรียล</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option>คอมพิวเตอร์</option>
-                <option>โน้ตบุ๊ค</option>
-                <option>จอมอนิเตอร์</option>
-                <option>เครื่องพิมพ์</option>
-                <option>อุปกรณ์เครือข่าย</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">สถานที่</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                {departments.map(dept => <option key={dept}>{dept}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">ราคา (บาท)</label>
-              <input type="number" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">วันที่ซื้อ</label>
-              <input type="date" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">วันหมดประกัน</label>
-              <input type="date" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-4">
-            <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-shadow">
-              ✅ บันทึก
-            </button>
-            <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300">
-              ❌ ยกเลิก
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Asset Detail Modal
   const AssetDetailModal = () => (
@@ -285,11 +436,11 @@ const App = () => {
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">วันที่ซื้อ</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.purchaseDate}</p>
+                <p className="font-semibold text-gray-900">{selectedAsset.purchase_date}</p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">หมดประกัน</p>
-                <p className="font-semibold text-gray-900">{selectedAsset.warrantyExpiry}</p>
+                <p className="font-semibold text-gray-900">{selectedAsset.warranty_expiry}</p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">ราคา</p>
@@ -297,8 +448,8 @@ const App = () => {
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">การรับประกันคงเหลือ</p>
-                <p className={`font-semibold ${selectedAsset.warrantyDays < 30 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {selectedAsset.warrantyDays} วัน
+                <p className={`font-semibold ${selectedAsset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {selectedAsset.warranty_days} วัน
                 </p>
               </div>
             </div>
@@ -307,7 +458,10 @@ const App = () => {
               <button className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center gap-2">
                 ✏️ แก้ไข
               </button>
-              <button className="flex-1 bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2">
+              <button 
+                onClick={() => deleteAsset(selectedAsset.id)}
+                className="flex-1 bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2"
+              >
                 🗑️ ลบ
               </button>
             </div>
@@ -318,30 +472,50 @@ const App = () => {
   );
 
   // Department Management Modal
-  const DepartmentModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">จัดการแผนก</h2>
-          <button onClick={() => setShowDepartmentModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
-        </div>
-        <div className="space-y-3 mb-4">
-          {departments.map((dept, idx) => (
-            <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-              <span className="font-medium">{dept}</span>
-              <button className="text-red-500 hover:text-red-700">🗑️</button>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input type="text" placeholder="ชื่อแผนกใหม่" className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-          <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg">
-            ➕ เพิ่ม
-          </button>
+  const DepartmentModal = () => {
+    const [newDept, setNewDept] = useState('');
+
+    const handleAddDept = () => {
+      if (newDept.trim()) {
+        addDepartment(newDept);
+        setNewDept('');
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">จัดการแผนก</h2>
+            <button onClick={() => setShowDepartmentModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+          </div>
+          <div className="space-y-3 mb-4">
+            {departments.map((dept, idx) => (
+              <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                <span className="font-medium">{dept}</span>
+                <button className="text-red-500 hover:text-red-700">🗑️</button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              placeholder="ชื่อแผนกใหม่"
+              value={newDept}
+              onChange={(e) => setNewDept(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+            />
+            <button 
+              onClick={handleAddDept}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg"
+            >
+              ➕ เพิ่ม
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Ink Budget Modal
   const InkBudgetModal = () => (
@@ -406,9 +580,9 @@ const App = () => {
                 <div className="flex items-start gap-3">
                   <span className="text-3xl">🖨️</span>
                   <div>
-                    <h3 className="font-bold text-lg text-gray-900">{ink.printerName}</h3>
-                    <p className="text-sm text-gray-600">รหัส: {ink.printerTag}</p>
-                    <p className="text-sm font-medium text-gray-700 mt-1">{ink.inkType}</p>
+                    <h3 className="font-bold text-lg text-gray-900">{ink.printer_name}</h3>
+                    <p className="text-sm text-gray-600">รหัส: {ink.printer_tag}</p>
+                    <p className="text-sm font-medium text-gray-700 mt-1">{ink.ink_type}</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -423,25 +597,25 @@ const App = () => {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm mb-3">
                 <div>
                   <p className="text-gray-500">ระดับหมึกปัจจุบัน</p>
-                  <p className="font-bold text-lg text-gray-900">{ink.currentLevel}%</p>
+                  <p className="font-bold text-lg text-gray-900">{ink.current_level}%</p>
                 </div>
                 <div>
                   <p className="text-gray-500">คงเหลือ (วัน)</p>
-                  <p className={`font-bold text-lg ${ink.estimatedDaysLeft < 10 ? 'text-red-600' : 'text-green-600'}`}>
-                    {ink.estimatedDaysLeft}
+                  <p className={`font-bold text-lg ${ink.estimated_days_left < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                    {ink.estimated_days_left}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-500">ราคา/หน่วย</p>
-                  <p className="font-bold text-lg text-gray-900">฿{ink.unitPrice.toLocaleString()}</p>
+                  <p className="font-bold text-lg text-gray-900">฿{ink.unit_price.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">ใช้ต่อเดือน (%)</p>
-                  <p className="font-bold text-lg text-gray-900">{ink.monthlyUsage}</p>
+                  <p className="font-bold text-lg text-gray-900">{ink.monthly_usage}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">เติมล่าสุด</p>
-                  <p className="font-bold text-sm text-gray-900">{ink.lastRefill}</p>
+                  <p className="font-bold text-sm text-gray-900">{ink.last_refill}</p>
                 </div>
               </div>
 
@@ -450,20 +624,20 @@ const App = () => {
                 <div className="w-full bg-gray-200 rounded-full h-3 relative">
                   <div 
                     className={`h-3 rounded-full transition-all duration-500 ${
-                      ink.currentLevel < ink.minLevel ? 'bg-red-500' :
-                      ink.currentLevel < 50 ? 'bg-yellow-500' : 'bg-green-500'
+                      ink.current_level < ink.min_level ? 'bg-red-500' :
+                      ink.current_level < 50 ? 'bg-yellow-500' : 'bg-green-500'
                     }`}
-                    style={{ width: `${ink.currentLevel}%` }}
+                    style={{ width: `${ink.current_level}%` }}
                   ></div>
                   <div 
                     className="absolute top-0 bottom-0 w-0.5 bg-red-600" 
-                    style={{ left: `${ink.minLevel}%` }}
-                    title={`ระดับขั้นต่ำ: ${ink.minLevel}%`}
+                    style={{ left: `${ink.min_level}%` }}
+                    title={`ระดับขั้นต่ำ: ${ink.min_level}%`}
                   ></div>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>0%</span>
-                  <span>ขั้นต่ำ: {ink.minLevel}%</span>
+                  <span>ขั้นต่ำ: {ink.min_level}%</span>
                   <span>100%</span>
                 </div>
               </div>
@@ -495,6 +669,17 @@ const App = () => {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <p className="text-xl font-bold text-gray-700">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Header */}
@@ -507,7 +692,7 @@ const App = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">ระบบจัดการทรัพย์สิน</h1>
-                <p className="text-xs text-gray-500">IT Asset Management System</p>
+                <p className="text-xs text-gray-500">IT Asset Management System (Supabase)</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -611,7 +796,7 @@ const App = () => {
           <div className="space-y-4">
             {/* Toolbar */}
             <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">ทรัพย์สินทั้งหมด</h1>
+              <h1 className="text-2xl font-bold text-gray-900">ทรัพย์สินทั้งหมด ({filteredAssets.length})</h1>
               <div className="flex gap-2 w-full md:w-auto">
                 <button 
                   onClick={() => setShowAddModal(true)}
@@ -714,7 +899,7 @@ const App = () => {
                     </div>
                     <div>
                       <div className="text-gray-500 mb-1">วันที่ซื้อ</div>
-                      <div className="font-semibold text-gray-900">{asset.purchaseDate}</div>
+                      <div className="font-semibold text-gray-900">{asset.purchase_date}</div>
                     </div>
                     <div>
                       <div className="text-gray-500 mb-1">ราคา</div>
@@ -724,10 +909,10 @@ const App = () => {
                       <div className="text-gray-500 mb-1">การรับประกัน</div>
                       <div
                         className={`font-semibold ${
-                          asset.warrantyDays < 30 ? 'text-yellow-600' : 'text-green-600'
+                          asset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600'
                         }`}
                       >
-                        {asset.warrantyDays < 365 ? `เหลือ ${asset.warrantyDays} วัน` : 'ยังใช้ได้'}
+                        {asset.warranty_days < 365 ? `เหลือ ${asset.warranty_days} วัน` : 'ยังใช้ได้'}
                       </div>
                     </div>
                   </div>
@@ -739,7 +924,7 @@ const App = () => {
               <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
                 <span className="text-6xl mb-4 block">🔍</span>
                 <p className="text-xl font-semibold text-gray-700 mb-2">ไม่พบทรัพย์สิน</p>
-                <p className="text-gray-500">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
+                <p className="text-gray-500">ลองเปลี่ยนคำค้นหาหรือตัวกรอง หรือเพิ่มทรัพย์สินใหม่จาก Supabase</p>
               </div>
             )}
           </div>
