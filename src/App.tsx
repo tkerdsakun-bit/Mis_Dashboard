@@ -14,6 +14,7 @@ const App = () => {
   const [showAddRepairModal, setShowAddRepairModal] = useState<boolean>(false);
   const [showInkTransactionModal, setShowInkTransactionModal] = useState<boolean>(false);
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
+  const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
@@ -29,7 +30,15 @@ const App = () => {
   const [repairHistory, setRepairHistory] = useState<RepairHistory[]>([]);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
 
-  // คำนวณสถิติ
+  // User Info
+  const currentUser = {
+    name: 'Admin',
+    email: 'admin@company.com',
+    role: 'ผู้ดูแลระบบ',
+    avatar: '👤',
+    department: 'IT Department'
+  };
+
   const stats = [
     { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50' },
     { icon: '⚠️', label: 'การรับประกันใกล้หมด', value: assets.filter((a: Asset) => a.warranty_days < 30).length.toString(), color: 'from-yellow-500 to-orange-500', bgColor: 'bg-yellow-50' },
@@ -45,14 +54,12 @@ const App = () => {
     return { ...cat, count, percent };
   });
 
-  // คำนวณรายรับรายจ่ายเดือนปัจจุบัน
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthlyTransactions = inkTransactions.filter(t => t.month === currentMonth);
   const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
   const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
   const netAmount = totalIncome - totalExpense;
 
-  // ดึงข้อมูลทั้งหมด
   useEffect(() => {
     fetchAllData();
     const cleanup = setupRealtimeSubscriptions();
@@ -267,6 +274,31 @@ const App = () => {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `assets_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const exportInkTransactions = (): void => {
+    const csvContent = [
+      ['วันที่', 'ประเภท', 'รายละเอียด', 'หมวดหมู่', 'จำนวนเงิน (บาท)', 'เดือน'],
+      ...inkTransactions.map((t: InkTransaction) => [
+        t.transaction_date,
+        t.transaction_type,
+        t.description,
+        t.category || '-',
+        t.transaction_type === 'รายจ่าย' ? `-${t.amount}` : t.amount,
+        t.month
+      ]),
+      [],
+      ['สรุปรายรับ-รายจ่ายเดือน ' + currentMonth],
+      ['รายรับทั้งหมด', totalIncome],
+      ['รายจ่ายทั้งหมด', totalExpense],
+      ['สุทธิ', netAmount >= 0 ? `+${netAmount}` : netAmount]
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `ink_transactions_${currentMonth}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
@@ -775,7 +807,6 @@ const App = () => {
           <button onClick={() => setShowInkTransactionModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
         </div>
 
-        {/* สรุปภาพรวม */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-red-50 to-pink-50 p-8 rounded-2xl border-2 border-red-100 shadow-lg hover:shadow-2xl transition-all">
             <div className="flex items-center gap-4 mb-3">
@@ -803,26 +834,24 @@ const App = () => {
             <p className="text-sm text-gray-500">{monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').length} รายการ</p>
           </div>
 
-          <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-blue-50 to-cyan-50 border-blue-100' : 'from-yellow-50 to-orange-50 border-yellow-100'} p-8 rounded-2xl border-2 shadow-lg hover:shadow-2xl transition-all`}>
+          <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-blue-50 to-cyan-50 border-blue-100' : 'from-orange-50 to-red-50 border-orange-100'} p-8 rounded-2xl border-2 shadow-lg hover:shadow-2xl transition-all`}>
             <div className="flex items-center gap-4 mb-3">
-              <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-yellow-500 to-orange-500'} p-4 rounded-xl shadow-lg`}>
-                <span className="text-4xl">{netAmount >= 0 ? '📊' : '⚠️'}</span>
+              <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-red-500'} p-4 rounded-xl shadow-lg`}>
+                <span className="text-4xl">{netAmount >= 0 ? '📈' : '📉'}</span>
               </div>
               <div>
-                <p className="text-sm text-gray-600 font-medium">สุทธิ</p>
+                <p className="text-sm text-gray-600 font-medium">ยอดสุทธิ</p>
                 <p className={`text-4xl font-bold ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{netAmount >= 0 ? '+' : ''}฿{Math.abs(netAmount).toLocaleString()}</p>
               </div>
             </div>
-            <p className="text-sm text-gray-500">{netAmount >= 0 ? 'รายรับมากกว่ารายจ่าย' : 'รายจ่ายมากกว่ารายรับ'}</p>
+            <p className="text-sm text-gray-500">{netAmount >= 0 ? 'กำไร' : 'ขาดทุน'}</p>
           </div>
         </div>
 
-        {/* ปุ่มเพิ่มรายการ */}
         <button onClick={() => setShowAddTransactionModal(true)} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-semibold hover:shadow-2xl hover:scale-105 transition-all mb-6 flex items-center justify-center gap-3 text-lg">
           ➕ เพิ่มรายการใหม่
         </button>
 
-        {/* รายการทั้งหมด */}
         <div className="space-y-3">
           {monthlyTransactions.map((transaction) => (
             <div key={transaction.id} className={`bg-gradient-to-r ${transaction.transaction_type === 'รายจ่าย' ? 'from-red-50 to-pink-50 border-red-100' : 'from-green-50 to-emerald-50 border-green-100'} border-2 rounded-2xl p-6 hover:shadow-xl transition-all`}>
@@ -1010,18 +1039,68 @@ const App = () => {
             </div>
             <div className="flex items-center gap-3">
               {[
-                { onClick: () => setShowDepartmentModal(true), color: 'from-gray-500 to-gray-600', label: '🏢 แผนก' },
-                { onClick: () => setShowCategoryModal(true), color: 'from-indigo-500 to-blue-500', label: '📂 ประเภท' },
-                { onClick: () => setShowInkBudgetModal(true), color: 'from-purple-500 to-pink-500', label: '🖨️ งบหมึก' },
-                { onClick: () => setShowRepairHistoryModal(true), color: 'from-orange-500 to-red-500', label: '🔧 ซ่อม' },
-                { onClick: () => setShowInkTransactionModal(true), color: 'from-green-500 to-emerald-500', label: '💰 รายรับ-จ่าย' }
+                { onClick: () => setShowDepartmentModal(true), color: 'from-gray-500 to-gray-600', label: '🏢' },
+                { onClick: () => setShowCategoryModal(true), color: 'from-indigo-500 to-blue-500', label: '📂' },
+                { onClick: () => setShowInkBudgetModal(true), color: 'from-purple-500 to-pink-500', label: '🖨️' },
+                { onClick: () => setShowRepairHistoryModal(true), color: 'from-orange-500 to-red-500', label: '🔧' },
+                { onClick: () => setShowInkTransactionModal(true), color: 'from-green-500 to-emerald-500', label: '💰' }
               ].map((btn, idx) => (
-                <button key={idx} onClick={btn.onClick} className={`hidden md:flex items-center gap-2 px-5 py-3 bg-gradient-to-r ${btn.color} text-white hover:shadow-2xl rounded-xl text-sm font-semibold transition-all hover:scale-105`}>
+                <button key={idx} onClick={btn.onClick} className={`hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r ${btn.color} text-white hover:shadow-2xl rounded-xl text-xl font-semibold transition-all hover:scale-110`}>
                   {btn.label}
                 </button>
               ))}
               <button className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110">⚙️</button>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-2xl flex items-center justify-center text-base font-bold shadow-xl">AD</div>
+              
+              {/* User Menu */}
+              <div className="relative">
+                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-xl transition-all">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-lg">
+                    {currentUser.avatar}
+                  </div>
+                  <div className="text-left hidden lg:block">
+                    <p className="text-sm font-bold text-gray-900">{currentUser.name}</p>
+                    <p className="text-xs text-gray-500">{currentUser.role}</p>
+                  </div>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 z-50 animate-slideUp">
+                    <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg">
+                        {currentUser.avatar}
+                      </div>
+                      <div>
+                        <p className="font-bold text-lg text-gray-900">{currentUser.name}</p>
+                        <p className="text-sm text-gray-600">{currentUser.email}</p>
+                        <span className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold rounded-full">
+                          {currentUser.role}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                        <span className="text-2xl">🏢</span>
+                        <div>
+                          <p className="text-xs text-gray-600">แผนก</p>
+                          <p className="font-semibold text-gray-900">{currentUser.department}</p>
+                        </div>
+                      </div>
+                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
+                        <span className="text-xl">👤</span>
+                        <span className="font-medium text-gray-700">โปรไฟล์</span>
+                      </button>
+                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
+                        <span className="text-xl">⚙️</span>
+                        <span className="font-medium text-gray-700">ตั้งค่า</span>
+                      </button>
+                      <button className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600">
+                        <span className="text-xl">🚪</span>
+                        <span className="font-medium">ออกจากระบบ</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1064,66 +1143,124 @@ const App = () => {
             </div>
 
             {/* รายรับ-รายจ่ายหมึก Widget */}
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border-2 border-gray-200 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-3xl p-8 border-2 border-green-200 shadow-2xl">
+              <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
                     💰 รายรับ-รายจ่ายหมึกเดือนนี้
                   </h2>
-                  <p className="text-gray-500 text-sm mt-1">สรุปรายรับและรายจ่ายประจำเดือน</p>
+                  <p className="text-gray-600 text-base mt-2 font-medium">
+                    📅 {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long' })} 
+                    <span className="ml-3 text-sm">({monthlyTransactions.length} รายการ)</span>
+                  </p>
                 </div>
-                <button onClick={() => setShowInkTransactionModal(true)} className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
-                  ดูทั้งหมด →
-                </button>
+                <div className="flex gap-3">
+                  <button onClick={exportInkTransactions} className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
+                    📥 Export
+                  </button>
+                  <button onClick={() => setShowInkTransactionModal(true)} className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
+                    📋 ดูทั้งหมด →
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-6">
-                {[
-                  { label: 'รายจ่าย', value: totalExpense, color: 'from-red-500 to-pink-500', bgColor: 'from-red-50 to-pink-50', icon: '💸' },
-                  { label: 'รายรับ', value: totalIncome, color: 'from-green-500 to-emerald-500', bgColor: 'from-green-50 to-emerald-50', icon: '💵' },
-                  { label: 'สุทธิ', value: Math.abs(netAmount), color: netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-yellow-500 to-orange-500', bgColor: netAmount >= 0 ? 'from-blue-50 to-cyan-50' : 'from-yellow-50 to-orange-50', icon: netAmount >= 0 ? '📊' : '⚠️', prefix: netAmount >= 0 ? '+' : '-' }
-                ].map((item, idx) => (
-                  <div key={idx} className={`bg-gradient-to-br ${item.bgColor} p-6 rounded-2xl border-2 border-gray-200 hover:shadow-xl transition-all`}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`bg-gradient-to-br ${item.color} p-3 rounded-xl shadow-lg`}>
-                        <span className="text-2xl">{item.icon}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 font-medium">{item.label}</p>
+
+              {/* สรุปยอด 3 การ์ด */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white rounded-2xl p-8 border-2 border-red-100 shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="bg-gradient-to-br from-red-500 to-pink-500 p-4 rounded-2xl shadow-lg">
+                      <span className="text-5xl">💸</span>
                     </div>
-                    <p className={`text-3xl font-bold bg-gradient-to-r ${item.color} bg-clip-text text-transparent`}>
-                      {item.prefix || ''}฿{item.value.toLocaleString()}
-                    </p>
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">
+                      {monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').length} รายการ
+                    </span>
                   </div>
-                ))}
+                  <p className="text-sm text-gray-600 font-medium mb-2">รายจ่ายทั้งหมด</p>
+                  <p className="text-5xl font-bold text-red-600 mb-3">฿{totalExpense.toLocaleString()}</p>
+                  <div className="w-full bg-red-100 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-red-500 to-pink-500 h-2 rounded-full shadow-lg transition-all duration-1000" style={{ width: totalExpense > 0 ? '100%' : '0%' }}></div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-8 border-2 border-green-100 shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-4 rounded-2xl shadow-lg">
+                      <span className="text-5xl">💵</span>
+                    </div>
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                      {monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').length} รายการ
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium mb-2">รายรับทั้งหมด</p>
+                  <p className="text-5xl font-bold text-green-600 mb-3">฿{totalIncome.toLocaleString()}</p>
+                  <div className="w-full bg-green-100 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full shadow-lg transition-all duration-1000" style={{ width: totalIncome > 0 ? '100%' : '0%' }}></div>
+                  </div>
+                </div>
+
+                <div className={`bg-white rounded-2xl p-8 border-2 ${netAmount >= 0 ? 'border-blue-100' : 'border-orange-100'} shadow-xl hover:shadow-2xl hover:scale-105 transition-all`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-red-500'} p-4 rounded-2xl shadow-lg`}>
+                      <span className="text-5xl">{netAmount >= 0 ? '📈' : '📉'}</span>
+                    </div>
+                    <span className={`${netAmount >= 0 ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'} px-3 py-1 rounded-full text-xs font-bold`}>
+                      {netAmount >= 0 ? 'กำไร' : 'ขาดทุน'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium mb-2">ยอดสุทธิ</p>
+                  <p className={`text-5xl font-bold ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'} mb-3`}>
+                    {netAmount >= 0 ? '+' : ''}฿{Math.abs(netAmount).toLocaleString()}
+                  </p>
+                  <div className={`w-full ${netAmount >= 0 ? 'bg-blue-100' : 'bg-orange-100'} rounded-full h-2`}>
+                    <div className={`bg-gradient-to-r ${netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-red-500'} h-2 rounded-full shadow-lg transition-all duration-1000`} style={{ width: '100%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* กราฟเปรียบเทียบ */}
+              <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-xl">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  📊 เปรียบเทียบรายรับ-รายจ่าย
+                </h3>
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">💸</span>
+                        <span className="font-semibold text-gray-700">รายจ่าย</span>
+                      </div>
+                      <span className="text-2xl font-bold text-red-600">฿{totalExpense.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-8 shadow-inner">
+                      <div 
+                        className="bg-gradient-to-r from-red-500 to-pink-500 h-8 rounded-full shadow-lg flex items-center justify-end pr-4 text-white text-sm font-bold transition-all duration-1000" 
+                        style={{ width: `${totalExpense > 0 && (totalExpense + totalIncome) > 0 ? (totalExpense / (totalExpense + totalIncome)) * 100 : 0}%`, minWidth: totalExpense > 0 ? '80px' : '0' }}
+                      >
+                        {totalExpense > 0 ? `${((totalExpense / (totalExpense + totalIncome)) * 100).toFixed(1)}%` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">💵</span>
+                        <span className="font-semibold text-gray-700">รายรับ</span>
+                      </div>
+                      <span className="text-2xl font-bold text-green-600">฿{totalIncome.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-8 shadow-inner">
+                      <div 
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-8 rounded-full shadow-lg flex items-center justify-end pr-4 text-white text-sm font-bold transition-all duration-1000" 
+                        style={{ width: `${totalIncome > 0 && (totalExpense + totalIncome) > 0 ? (totalIncome / (totalExpense + totalIncome)) * 100 : 0}%`, minWidth: totalIncome > 0 ? '80px' : '0' }}
+                      >
+                        {totalIncome > 0 ? `${((totalIncome / (totalExpense + totalIncome)) * 100).toFixed(1)}%` : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* งบหมึกสรุป */}
-            {inkBudget && (
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border-2 border-gray-200 shadow-2xl">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 flex items-center gap-3">
-                  💰 สรุปงบหมึกพิมพ์เดือนนี้
-                </h2>
-                <div className="grid grid-cols-3 gap-6 mb-6">
-                  {[
-                    { label: 'ใช้ไปแล้ว', value: inkBudget.total_spent, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-                    { label: 'งบทั้งหมด', value: inkBudget.budget_limit, color: 'text-green-600', bgColor: 'bg-green-50' },
-                    { label: 'คงเหลือ', value: inkBudget.budget_limit - inkBudget.total_spent, color: 'text-purple-600', bgColor: 'bg-purple-50' }
-                  ].map((item, idx) => (
-                    <div key={idx} className={`text-center ${item.bgColor} p-6 rounded-2xl border border-gray-200 hover:shadow-xl transition-all`}>
-                      <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
-                      <p className={`text-4xl font-bold ${item.color}`}>฿{item.value.toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-6 shadow-inner">
-                  <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-6 rounded-full transition-all shadow-lg" style={{ width: `${(inkBudget.total_spent / inkBudget.budget_limit) * 100}%` }}></div>
-                </div>
-                <p className="text-center text-sm text-gray-600 mt-3 font-medium">ใช้ไป {((inkBudget.total_spent / inkBudget.budget_limit) * 100).toFixed(1)}%</p>
-                <button onClick={() => setShowInkBudgetModal(true)} className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-2xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
-                  📋 ดูรายละเอียดหมึกทั้งหมด
-                </button>
-              </div>
-            )}
 
             {/* Category Distribution */}
             <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border-2 border-gray-200 shadow-2xl">
@@ -1144,7 +1281,6 @@ const App = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Toolbar */}
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">ทรัพย์สินทั้งหมด ({filteredAssets.length})</h1>
               <div className="flex gap-3 w-full md:w-auto">
@@ -1157,89 +1293,8 @@ const App = () => {
               </div>
             </div>
 
-            {/* Search and Filters */}
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-gray-200 shadow-xl">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
-                  <input type="text" placeholder="ค้นหาทรัพย์สิน..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-14 pr-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium" />
-                </div>
-                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium">
-                  <option>ทั้งหมด</option>
-                  {assetCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.icon} {cat.name}</option>)}
-                </select>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium">
-                  <option>ทั้งหมด</option>
-                  <option>ใช้งาน</option>
-                  <option>ซ่อม</option>
-                  <option>เก็บคลัง</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Assets Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAssets.map((asset: Asset) => (
-                <div key={asset.id} className="bg-white/80 backdrop-blur-xl rounded-2xl overflow-hidden border-2 border-gray-200 hover:shadow-2xl hover:scale-105 transition-all cursor-pointer group" onClick={() => { setSelectedAsset(asset); setShowDetailModal(true); }}>
-                  {asset.image_url ? (
-                    <img src={asset.image_url} alt={asset.name} className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-56 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
-                      <span className="text-8xl group-hover:scale-110 transition-transform duration-500">{asset.icon}</span>
-                    </div>
-                  )}
-                  <div className="p-6">
-                    <h3 className="font-bold text-xl text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">{asset.name}</h3>
-                    <div className="space-y-3 text-sm">
-                      {[
-                        { label: 'รหัส', value: asset.tag, isCode: true },
-                        { label: 'แผนก', value: asset.location },
-                        { label: 'ราคา', value: `฿${asset.price}`, isPrice: true },
-                        { label: 'สถานะ', value: asset.status, isStatus: true, status: asset.status }
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-gray-600 font-medium">{item.label}:</span>
-                          {item.isCode ? (
-                            <code className="bg-blue-50 px-3 py-1 rounded-lg text-blue-600 font-semibold">{item.value}</code>
-                          ) : item.isPrice ? (
-                            <span className="font-bold text-green-600 text-lg">{item.value}</span>
-                          ) : item.isStatus ? (
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.status === 'ใช้งาน' ? 'bg-green-100 text-green-700' : item.status === 'ซ่อม' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'}`}>{item.value}</span>
-                          ) : (
-                            <span className="font-semibold text-gray-900">{item.value}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredAssets.length === 0 && (
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-20 text-center border-2 border-gray-200 shadow-2xl">
-                <span className="text-9xl mb-6 block animate-bounce">🔍</span>
-                <p className="text-3xl font-bold text-gray-700 mb-3">ไม่พบทรัพย์สิน</p>
-                <p className="text-gray-500 text-lg">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
-      {showAddAssetModal && <AddAssetModal />}
-      {showEditAssetModal && <EditAssetModal />}
-      {showDetailModal && selectedAsset && <AssetDetailModal />}
-      {showDepartmentModal && <DepartmentModal />}
-      {showCategoryModal && <CategoryModal />}
-      {showInkBudgetModal && <InkBudgetModal />}
-      {showRepairHistoryModal && <RepairHistoryModal />}
-      {showAddRepairModal && <AddRepairModal />}
-      {showInkTransactionModal && <InkTransactionModal />}
-      {showAddTransactionModal && <AddTransactionModal />}
-    </div>
-  );
-};
-
-export default App;
+                  <input type="text" placeholder="ค้นหาทรัพย์สิน..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-14 pr-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue
