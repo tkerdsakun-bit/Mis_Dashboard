@@ -61,3 +61,19 @@ export type InkBudgetSummary = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type RepairHistory = {
+  id: number;
+  asset_id: number;
+  asset_name: string;
+  asset_tag: string;
+  issue_description: string;
+  repair_status: string;
+  repair_cost: number;
+  start_date: string;
+  end_date?: string;
+  technician?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+};
