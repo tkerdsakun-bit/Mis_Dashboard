@@ -24,10 +24,8 @@ const App = () => {
 
   const [assets, setAssets] = useState<Asset[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const [inkInventory, setInkInventory] = useState<any[]>([]);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const [inkBudget, setInkBudget] = useState<any>(null);
+const [, setInkInventory] = useState<InkItem[]>([]);
+const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const [assetCategories, setAssetCategories] = useState<AssetCategory[]>([]);
   const [repairHistory, setRepairHistory] = useState<RepairHistory[]>([]);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
