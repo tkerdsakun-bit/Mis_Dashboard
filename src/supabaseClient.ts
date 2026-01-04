@@ -161,49 +161,74 @@ const mockInkInventory: InkItem[] = [
   }
 ];
 
-// Mock Supabase client that works without database
+// Helper to get mock data by table name
+const getMockData = (table: string) => {
+  switch (table) {
+    case 'assets':
+      return mockAssets;
+    case 'departments':
+      return mockDepartments;
+    case 'ink_inventory':
+      return mockInkInventory;
+    default:
+      return [];
+  }
+};
+
+// Mock Supabase client with proper TypeScript types
 export const supabase = {
-  from: (table: string) => ({
-    select: () => {
-      const data = table === 'assets' ? mockAssets : 
-                   table === 'departments' ? mockDepartments : 
-                   table === 'ink_inventory' ? mockInkInventory : [];
-      return Promise.resolve({ data, error: null });
-    },
-    insert: (newData: any) => {
-      console.log('Mock insert:', newData);
-      return Promise.resolve({ data: newData, error: null });
-    },
-    update: (updates: any) => ({
-      eq: (field: string, value: any) => {
-        console.log('Mock update:', updates, 'where', field, '=', value);
-        return Promise.resolve({ data: updates, error: null });
+  from: (table: string) => {
+    const queryBuilder = {
+      select: (columns?: string) => {
+        const data = getMockData(table);
+        return {
+          ...queryBuilder,
+          data,
+          error: null,
+          order: (column: string, options?: { ascending?: boolean }) => {
+            console.log(`Mock order by ${column}`, options);
+            return Promise.resolve({ data, error: null });
+          }
+        };
+      },
+      insert: (newData: any) => {
+        console.log('Mock insert:', newData);
+        return Promise.resolve({ data: newData, error: null });
+      },
+      update: (updates: any) => ({
+        eq: (_field: string, _value: any) => {
+          console.log('Mock update:', updates);
+          return Promise.resolve({ data: updates, error: null });
+        }
+      }),
+      delete: () => ({
+        eq: (_field: string, _value: any) => {
+          console.log('Mock delete');
+          return Promise.resolve({ data: null, error: null });
+        }
+      }),
+      order: (column: string, options?: { ascending?: boolean }) => {
+        const data = getMockData(table);
+        console.log(`Mock order by ${column}`, options);
+        return {
+          select: (columns?: string) => {
+            console.log('Mock select after order:', columns);
+            return Promise.resolve({ data, error: null });
+          }
+        };
       }
-    }),
-    delete: () => ({
-      eq: (field: string, value: any) => {
-        console.log('Mock delete where', field, '=', value);
-        return Promise.resolve({ data: null, error: null });
-      }
-    }),
-    order: (field: string, options?: any) => ({
-      select: () => {
-        const data = table === 'assets' ? mockAssets : 
-                     table === 'departments' ? mockDepartments : 
-                     table === 'ink_inventory' ? mockInkInventory : [];
-        return Promise.resolve({ data, error: null });
-      }
-    })
-  }),
+    };
+    return queryBuilder;
+  },
   channel: (name: string) => ({
-    on: (event: string, options: any, callback: any) => ({
+    on: (_event: string, _options: any, _callback: any) => ({
       subscribe: () => {
         console.log('Mock realtime subscription:', name);
         return {};
       }
     })
   }),
-  removeChannel: (channel: any) => {
+  removeChannel: (_channel: any) => {
     console.log('Mock remove channel');
   }
 };
