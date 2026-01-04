@@ -1080,7 +1080,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
               {[
                 { onClick: () => setShowDepartmentModal(true), color: 'from-gray-500 to-gray-600', label: '🏢' },
                 { onClick: () => setShowCategoryModal(true), color: 'from-indigo-500 to-blue-500', label: '📂' },
-                { onClick: () => setShowInkBudgetModal(true), color: 'from-purple-500 to-pink-500', label: '🖨️' },
                 { onClick: () => setShowRepairHistoryModal(true), color: 'from-orange-500 to-red-500', label: '🔧' },
                 { onClick: () => setShowInkTransactionModal(true), color: 'from-green-500 to-emerald-500', label: '💰' }
               ].map((btn, idx) => (
