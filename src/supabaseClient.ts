@@ -5,8 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Database Types
-export interface Asset {
+export type Asset = {
   id: number;
   icon: string;
   name: string;
@@ -21,9 +20,9 @@ export interface Asset {
   warranty_days: number;
   created_at?: string;
   updated_at?: string;
-}
+};
 
-export interface InkItem {
+export type InkItem = {
   id: number;
   printer_name: string;
   printer_tag: string;
@@ -38,10 +37,10 @@ export interface InkItem {
   status: string;
   created_at?: string;
   updated_at?: string;
-}
+};
 
-export interface Department {
+export type Department = {
   id: number;
   name: string;
   created_at?: string;
-}
+};
