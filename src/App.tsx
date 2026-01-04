@@ -25,8 +25,6 @@ const App = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [assetCategories, setAssetCategories] = useState<AssetCategory[]>([]);
-  const [inkInventory, setInkInventory] = useState<InkItem[]>([]);
-  const [inkBudget, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const [repairHistory, setRepairHistory] = useState<RepairHistory[]>([]);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
 
