@@ -1367,5 +1367,5 @@ const App = () => {
       {showInkBudgetModal && <InkBudgetModal />}
     </div>
   );
-
+};
 export default App;
