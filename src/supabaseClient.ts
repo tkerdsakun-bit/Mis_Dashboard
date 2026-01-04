@@ -77,3 +77,14 @@ export type RepairHistory = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type InkTransaction = {
+  id: number;
+  transaction_type: 'รายจ่าย' | 'รายรับ';
+  description: string;
+  amount: number;
+  transaction_date: string;
+  month: string;
+  category?: string;
+  created_at?: string;
+};
