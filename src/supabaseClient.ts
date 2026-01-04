@@ -34,6 +34,12 @@ export type InkItem = {
   updated_at?: string;
 };
 
+export type Department = {
+  id: number;
+  name: string;
+  created_at?: string;
+};
+
 // Mock data
 const mockAssets: Asset[] = [
   {
@@ -108,7 +114,7 @@ const mockAssets: Asset[] = [
   }
 ];
 
-const mockDepartments = [
+const mockDepartments: Department[] = [
   { id: 1, name: 'ฝ่ายไอที' },
   { id: 2, name: 'ฝ่ายขาย' },
   { id: 3, name: 'ฝ่ายบัญชี' },
@@ -162,7 +168,7 @@ const mockInkInventory: InkItem[] = [
 ];
 
 // Helper to get mock data by table name
-const getMockData = (table: string) => {
+const getMockData = (table: string): Asset[] | Department[] | InkItem[] => {
   switch (table) {
     case 'assets':
       return mockAssets;
@@ -179,7 +185,7 @@ const getMockData = (table: string) => {
 export const supabase = {
   from: (table: string) => {
     const queryBuilder = {
-      select: (columns?: string) => {
+      select: (_columns?: string) => {
         const data = getMockData(table);
         return {
           ...queryBuilder,
@@ -211,8 +217,7 @@ export const supabase = {
         const data = getMockData(table);
         console.log(`Mock order by ${column}`, options);
         return {
-          select: (columns?: string) => {
-            console.log('Mock select after order:', columns);
+          select: (_columns?: string) => {
             return Promise.resolve({ data, error: null });
           }
         };
