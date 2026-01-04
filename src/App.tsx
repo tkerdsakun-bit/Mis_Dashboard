@@ -1368,43 +1368,4 @@ const App = () => {
     </div>
   );
 
-  function InkBudgetModal() {
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn" onClick={() => setShowInkBudgetModal(false)}>
-        <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-8">
-            <div><h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">🖨️ สรุปหมึกพิมพ์</h2></div>
-            <button onClick={() => setShowInkBudgetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl">✕</button>
-          </div>
-          <div className="space-y-4">
-            {inkInventory.map(ink => (
-              <div key={ink.id} className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 rounded-2xl p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start gap-4">
-                    <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4 rounded-xl shadow-lg"><span className="text-4xl">🖨️</span></div>
-                    <div><h3 className="font-bold text-xl text-gray-900">{ink.printer_name}</h3><p className="text-sm text-gray-600">รหัส: {ink.printer_tag}</p><p className="text-sm font-semibold text-gray-700 mt-2">{ink.ink_type}</p></div>
-                  </div>
-                  <span className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg ${ink.status === 'วิกฤต' ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : ink.status === 'ต่ำ' ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white' : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'}`}>{ink.status}</span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm mb-4">
-                  {[
-                    { label: 'ระดับหมึก', value: `${ink.current_level}%` },
-                    { label: 'คงเหลือ (วัน)', value: ink.estimated_days_left },
-                    { label: 'ราคา/หน่วย', value: `฿${ink.unit_price.toLocaleString()}` },
-                    { label: 'ใช้ต่อเดือน', value: `${ink.monthly_usage}%` },
-                    { label: 'เติมล่าสุด', value: ink.last_refill }
-                  ].map((item, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200"><p className="text-gray-500 mb-1 text-xs">{item.label}</p><p className="font-bold text-lg text-gray-900">{item.value}</p></div>
-                  ))}
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-4 shadow-inner"><div className={`h-4 rounded-full transition-all duration-500 shadow-lg ${ink.current_level < ink.min_level ? 'bg-gradient-to-r from-red-500 to-pink-500' : ink.current_level < 50 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-gradient-to-r from-green-500 to-emerald-500'}`} style={{ width: `${ink.current_level}%` }}></div></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-};
-
 export default App;
