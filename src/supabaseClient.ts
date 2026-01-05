@@ -88,3 +88,16 @@ export type InkTransaction = {
   category?: string;
   created_at?: string;
 };
+
+export interface User {
+  id: number;
+  username: string;
+  password: string;
+  name: string;
+  email: string | null;
+  role: string;
+  avatar: string | null;
+  department: string | null;
+  created_at: string;
+  updated_at: string;
+};
