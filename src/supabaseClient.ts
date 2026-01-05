@@ -1,68 +1,66 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export type Asset = {
+// Type Definitions
+export interface Asset {
   id: number;
-  icon: string;
   name: string;
   tag: string;
+  asset_code?: string; // NEW FIELD
   serial: string;
   category: string;
   location: string;
-  status: string;
+  price: string;
   purchase_date: string;
   warranty_expiry: string;
-  price: string;
+  icon: string;
+  status: string;
   warranty_days: number;
   image_url?: string;
   created_at?: string;
-  updated_at?: string;
-};
+}
 
-export type InkItem = {
+export interface InkItem {
   id: number;
-  printer_name: string;
-  printer_tag: string;
-  ink_type: string;
-  current_level: number;
-  min_level: number;
-  max_level: number;
+  name: string;
+  model: string;
+  quantity: number;
   unit_price: number;
-  last_refill: string;
-  estimated_days_left: number;
-  monthly_usage: number;
+  total_price: number;
+  supplier: string;
+  purchase_date: string;
+  category: string;
   status: string;
   created_at?: string;
-  updated_at?: string;
-};
+}
 
-export type Department = {
+export interface Department {
   id: number;
   name: string;
   created_at?: string;
-};
+}
 
-export type AssetCategory = {
+export interface AssetCategory {
   id: number;
   name: string;
   icon: string;
   created_at?: string;
-};
+}
 
-export type InkBudgetSummary = {
+export interface InkBudgetSummary {
   id: number;
   month: string;
-  total_spent: number;
-  budget_limit: number;
+  total_income: number;
+  total_expense: number;
+  net_amount: number;
   created_at?: string;
-  updated_at?: string;
-};
+}
 
-export type RepairHistory = {
+export interface RepairHistory {
   id: number;
   asset_id: number;
   asset_name: string;
@@ -75,20 +73,20 @@ export type RepairHistory = {
   technician?: string;
   notes?: string;
   created_at?: string;
-  updated_at?: string;
-};
+}
 
-export type InkTransaction = {
+export interface InkTransaction {
   id: number;
-  transaction_type: 'รายจ่าย' | 'รายรับ';
+  transaction_type: string; // 'รายรับ' or 'รายจ่าย'
   description: string;
   amount: number;
   transaction_date: string;
   month: string;
   category?: string;
   created_at?: string;
-};
+}
 
+// NEW TYPE for Borrowing System
 export interface BorrowRecord {
   id: number;
   asset_id: number;
@@ -102,4 +100,4 @@ export interface BorrowRecord {
   return_date?: string;
   notes?: string;
   created_at?: string;
-};
+}
