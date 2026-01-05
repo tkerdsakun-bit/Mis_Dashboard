@@ -191,55 +191,6 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
 
-  // Avatar Upload Handler
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      alert('❌ รองรับเฉพาะไฟล์ JPG, PNG, WEBP เท่านั้น');
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('❌ ขนาดไฟล์ต้องไม่เกิน 2MB');
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `avatar-${currentUser.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('assets')
-        .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('assets').getPublicUrl(filePath);
-      const avatarUrl = urlData.publicUrl;
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar: avatarUrl, updated_at: new Date().toISOString() })
-        .eq('id', currentUser.id);
-
-      if (updateError) throw updateError;
-
-      alert('✅ อัพเดตรูปโปรไฟล์สำเร็จ!');
-      window.location.reload();
-
-    } catch (error: any) {
-      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const [assets, setAssets] = useState<Asset[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
 const [, setInkInventory] = useState<InkItem[]>([]);
@@ -1290,21 +1241,16 @@ const currentUser = propUser || {
 
           <div className="flex flex-col items-center mb-8">
             <div className="relative">
-              <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-6xl shadow-xl">
-                👤
+              <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-6xl shadow-xl overflow-hidden">
+                {currentUser.avatar ? (
+                  <img src={currentUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>👤</span>
+                )}
               </div>
-              {/* Avatar Upload */}
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110 cursor-pointer">
+              <button className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110">
                 📷
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleAvatarUpload}
-                className="hidden"
-                disabled={uploading}
-              />
+              </button>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mt-4">{profileData.name}</h3>
             <p className="text-gray-500">{profileData.position}</p>
