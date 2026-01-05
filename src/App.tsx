@@ -191,6 +191,125 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
 
+  // Theme Management
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [autoBackup, setAutoBackup] = useState<boolean>(false);
+  const [emailNotif, setEmailNotif] = useState<boolean>(true);
+
+  // Avatar Upload Handler
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('❌ รองรับเฉพาะไฟล์ JPG, PNG, WEBP เท่านั้น');
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('❌ ขนาดไฟล์ต้องไม่เกิน 2MB');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar-${currentUser.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('assets')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData.publicUrl;
+
+      // Update user avatar in database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar: avatarUrl, updated_at: new Date().toISOString() })
+        .eq('id', currentUser.id);
+
+      if (updateError) throw updateError;
+
+      alert('✅ อัพเดตรูปโปรไฟล์สำเร็จ!');
+      
+      // Reload page to show new avatar
+      window.location.reload();
+
+    } catch (error: any) {
+      console.error('Avatar upload error:', error);
+      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Save Settings Handler
+  const handleSaveSettings = async (settings: any) => {
+    try {
+      // Save to localStorage
+      localStorage.setItem('app_settings', JSON.stringify(settings));
+      
+      // Apply theme
+      setTheme(settings.theme);
+      document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+      
+      // Update other settings
+      setAutoBackup(settings.autoBackup);
+      setEmailNotif(settings.emailNotif);
+      
+      // Optionally save to database
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          user_id: currentUser.id,
+          settings: settings,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) console.warn('Settings save warning:', error);
+      
+      alert('✅ บันทึกการตั้งค่าสำเร็จ!');
+      return true;
+    } catch (error: any) {
+      console.error('Save settings error:', error);
+      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+      return false;
+    }
+  };
+
+  // Load Settings on Mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('app_settings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        setTheme(settings.theme || 'light');
+        setAutoBackup(settings.autoBackup || false);
+        setEmailNotif(settings.emailNotif || true);
+        document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+      } catch (error) {
+        console.error('Load settings error:', error);
+      }
+    }
+  }, []);
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
 const [, setInkInventory] = useState<InkItem[]>([]);
@@ -1214,6 +1333,18 @@ const currentUser = propUser || {
 };
 
 
+
+  const ProfileModal = () => {
+    const [editMode, setEditMode] = useState(false);
+    const [profileData, setProfileData] = useState({
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: '099-999-9999',
+      position: 'IT Administrator',
+      department: currentUser.department,
+      bio: 'ผู้ดูแลระบบจัดการทรัพย์สินไอที'
+    });
+
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
         <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
@@ -1296,25 +1427,33 @@ const currentUser = propUser || {
         </div>
       </div>
     );
+  };
 
 
   const SettingsModal = () => {
     const [settings, setSettings] = useState({
-      theme: 'light',
+      theme: theme,
       language: 'th',
       notifications: true,
-      emailNotif: true,
-      autoBackup: false,
+      emailNotif: emailNotif,
+      autoBackup: autoBackup,
       itemsPerPage: '20'
     });
+
+    const handleSave = async () => {
+      const success = await handleSaveSettings(settings);
+      if (success) {
+        setShowSettingsModal(false);
+      }
+    };
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
         <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-3">
-                ⚙️ ตั้งค่าระบบ
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
+                ⚙️ การตั้งค่า
               </h2>
               <p className="text-gray-500 text-sm mt-1">ปรับแต่งการใช้งานตามที่คุณต้องการ</p>
             </div>
@@ -1322,87 +1461,133 @@ const currentUser = propUser || {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🎨 รูปแบบการแสดงผล</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setSettings({...settings, theme: 'light'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'light' ? 'border-blue-500 bg-white shadow-lg scale-105' : 'border-gray-200 bg-white hover:border-blue-300'}`}>
-                  <div className="text-3xl mb-2">☀️</div>
-                  <div className="font-semibold">สว่าง (Light)</div>
-                </button>
-                <button onClick={() => setSettings({...settings, theme: 'dark'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'dark' ? 'border-blue-500 bg-gray-800 text-white shadow-lg scale-105' : 'border-gray-200 bg-gray-800 text-white hover:border-blue-300'}`}>
-                  <div className="text-3xl mb-2">🌙</div>
-                  <div className="font-semibold">มืด (Dark)</div>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🌐 ภาษา</h3>
-              <select value={settings.language} onChange={(e) => setSettings({...settings, language: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all">
-                <option value="th">🇹🇭 ไทย (Thai)</option>
-                <option value="en">🇺🇸 English</option>
-              </select>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🔔 การแจ้งเตือน</h3>
-              <div className="space-y-3">
-                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🔔</span>
-                    <div>
-                      <div className="font-semibold text-gray-900">แจ้งเตือนในระบบ</div>
-                      <div className="text-sm text-gray-500">แสดงการแจ้งเตือนทั่วไป</div>
-                    </div>
-                  </div>
-                  <input type="checkbox" checked={settings.notifications} onChange={(e) => setSettings({...settings, notifications: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
-                </label>
-                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">📧</span>
-                    <div>
-                      <div className="font-semibold text-gray-900">อีเมลแจ้งเตือน</div>
-                      <div className="text-sm text-gray-500">ส่งการแจ้งเตือนไปอีเมล</div>
-                    </div>
-                  </div>
-                  <input type="checkbox" checked={settings.emailNotif} onChange={(e) => setSettings({...settings, emailNotif: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
-                </label>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-100">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🛠️ ระบบ</h3>
-              <div className="space-y-4">
-                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">💾</span>
-                    <div>
-                      <div className="font-semibold text-gray-900">สำรองข้อมูลอัตโนมัติ</div>
-                      <div className="text-sm text-gray-500">สำรองข้อมูลทุกวัน</div>
-                    </div>
-                  </div>
-                  <input type="checkbox" checked={settings.autoBackup} onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})} className="w-6 h-6 text-orange-600 rounded focus:ring-2 focus:ring-orange-500" />
-                </label>
+            {/* Theme Setting */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">📊 จำนวนรายการต่อหน้า</label>
-                  <select value={settings.itemsPerPage} onChange={(e) => setSettings({...settings, itemsPerPage: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
-                    <option value="10">10 รายการ</option>
-                    <option value="20">20 รายการ</option>
-                    <option value="50">50 รายการ</option>
-                    <option value="100">100 รายการ</option>
+                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                    🎨 ธีม (Theme)
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">เลือกธีมที่คุณชอบ</p>
+                </div>
+                <select 
+                  value={settings.theme} 
+                  onChange={(e) => setSettings({...settings, theme: e.target.value as 'light' | 'dark'})}
+                  className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                >
+                  <option value="light">☀️ สว่าง (Light)</option>
+                  <option value="dark">🌙 มืด (Dark)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Language Setting */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                    🌐 ภาษา (Language)
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">เลือกภาษาที่ใช้งาน</p>
+                </div>
+                <select 
+                  value={settings.language} 
+                  onChange={(e) => setSettings({...settings, language: e.target.value})}
+                  className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
+                >
+                  <option value="th">🇹🇭 ไทย</option>
+                  <option value="en">🇬🇧 English</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Notifications */}
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                    🔔 การแจ้งเตือน
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">จัดการการแจ้งเตือนต่างๆ</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:bg-gray-50 transition-all cursor-pointer">
+                  <span className="text-gray-700">แจ้งเตือนทั่วไป</span>
+                  <input 
+                    type="checkbox" 
+                    checked={settings.notifications}
+                    onChange={(e) => setSettings({...settings, notifications: e.target.checked})}
+                    className="w-5 h-5 text-yellow-500 rounded focus:ring-2 focus:ring-yellow-500"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:bg-gray-50 transition-all cursor-pointer">
+                  <span className="text-gray-700">📧 แจ้งเตือนทางอีเมล</span>
+                  <input 
+                    type="checkbox" 
+                    checked={settings.emailNotif}
+                    onChange={(e) => setSettings({...settings, emailNotif: e.target.checked})}
+                    className="w-5 h-5 text-yellow-500 rounded focus:ring-2 focus:ring-yellow-500"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* System Settings */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                    💾 ระบบ
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">ตั้งค่าระบบ</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:bg-gray-50 transition-all cursor-pointer">
+                  <span className="text-gray-700">🔄 สำรองข้อมูลอัตโนมัติ</span>
+                  <input 
+                    type="checkbox" 
+                    checked={settings.autoBackup}
+                    onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})}
+                    className="w-5 h-5 text-purple-500 rounded focus:ring-2 focus:ring-purple-500"
+                  />
+                </label>
+
+                <div className="flex items-center justify-between p-3 bg-white rounded-xl">
+                  <span className="text-gray-700">📊 แสดงรายการต่อหน้า</span>
+                  <select 
+                    value={settings.itemsPerPage} 
+                    onChange={(e) => setSettings({...settings, itemsPerPage: e.target.value})}
+                    className="px-3 py-1 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  >
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
                   </select>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="flex gap-4 pt-4">
-              <button onClick={() => { alert('✅ บันทึกการตั้งค่าสำเร็จ!\n(นี่คือ Demo - ไม่มีการบันทึกจริง)'); setShowSettingsModal(false); }} className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
-                💾 บันทึกการตั้งค่า
-              </button>
-              <button onClick={() => setShowSettingsModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all">
-                ยกเลิก
-              </button>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex gap-4 mt-8">
+            <button 
+              onClick={() => setShowSettingsModal(false)} 
+              className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+            >
+              ยกเลิก
+            </button>
+            <button 
+              onClick={handleSave}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+            >
+              💾 บันทึกการตั้งค่า
+            </button>
           </div>
         </div>
       </div>
@@ -1794,206 +1979,20 @@ const currentUser = propUser || {
         )}
       </div>
 
-{/* All Modals */}
-{showAddAssetModal && <AddAssetModal />}
-{showEditAssetModal && <EditAssetModal />}
-{showDetailModal && <AssetDetailModal />}
-{showDepartmentModal && <DepartmentModal />}
-{showCategoryModal && <CategoryModal />}
-{showAddRepairModal && <AddRepairModal />}
-{showRepairHistoryModal && <RepairHistoryModal />}
-{showInkTransactionModal && <InkTransactionModal />}
-
-{/* Profile Modal - แบบ inline */}
-{showProfileModal && (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-      {(() => {
-        const [editMode, setEditMode] = useState(false);
-        const [uploadingAvatar, setUploadingAvatar] = useState(false);
-        const [profileData, setProfileData] = useState({
-          name: currentUser.name,
-          email: currentUser.email,
-          phone: currentUser.phone || '099-999-9999',
-          position: currentUser.position || 'IT Administrator',
-          department: currentUser.department,
-          bio: currentUser.bio || 'ผู้ดูแลระบบจัดการทรัพย์สินไอที',
-          avatar: currentUser.avatar || ''
-        });
-
-        const handleSaveProfile = async () => {
-          try {
-            const { error } = await supabase
-              .from('users')
-              .update({
-                name: profileData.name,
-                phone: profileData.phone,
-                position: profileData.position,
-                department: profileData.department,
-                bio: profileData.bio,
-                avatar: profileData.avatar
-              })
-              .eq('id', currentUser.id);
-
-            if (error) throw error;
-            setCurrentUser({ ...currentUser, ...profileData });
-            setEditMode(false);
-            alert('✅ บันทึกข้อมูลสำเร็จ!');
-            fetchUsers();
-          } catch (error) {
-            console.error('Error updating profile:', error);
-            alert('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-          }
-        };
-
-        const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          if (file.size > 2 * 1024 * 1024) {
-            alert('❌ ไฟล์ใหญ่เกินไป (ต้องไม่เกิน 2MB)');
-            return;
-          }
-          if (!file.type.startsWith('image/')) {
-            alert('❌ กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-            return;
-          }
-          setUploadingAvatar(true);
-          try {
-            const uploadedUrl = await uploadImage(file);
-            if (uploadedUrl) {
-              setProfileData({ ...profileData, avatar: uploadedUrl });
-              alert('✅ อัพโหลดรูปภาพสำเร็จ!');
-            }
-          } catch (error) {
-            console.error('Error uploading avatar:', error);
-            alert('❌ อัพโหลดรูปภาพไม่สำเร็จ');
-          } finally {
-            setUploadingAvatar(false);
-          }
-        };
-
-        return (
-          <>
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
-                  👤 โปรไฟล์ของฉัน
-                </h2>
-                <p className="text-gray-500 text-sm mt-1">จัดการข้อมูลส่วนตัวของคุณ</p>
-              </div>
-              <button onClick={() => setShowProfileModal(false)} className="text-gray-400 hover:text-gray-600 transition-all text-3xl hover:rotate-90 duration-300">
-                ✕
-              </button>
-            </div>
-
-            {/* Avatar with Upload */}
-            <div className="flex flex-col items-center mb-8">
-              <div className="relative group">
-                <img
-                  src={profileData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profileData.name)}`}
-                  alt="Profile Avatar"
-                  className="w-32 h-32 rounded-full border-4 border-purple-300 shadow-2xl object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'; }}
-                />
-                {editMode && (
-                  <label className="absolute bottom-0 right-0 bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-3 rounded-full cursor-pointer hover:from-blue-600 hover:to-cyan-600 transition-all shadow-xl hover:scale-110 active:scale-95">
-                    <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
-                    <span className="text-xl">{uploadingAvatar ? '⏳' : '📷'}</span>
-                  </label>
-                )}
-                {editMode && !uploadingAvatar && (
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-full transition-all flex items-center justify-center pointer-events-none">
-                    <p className="text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">คลิกเพื่อเปลี่ยน</p>
-                  </div>
-                )}
-              </div>
-              <p className="mt-4 text-sm text-gray-600 text-center font-medium">{profileData.name}</p>
-              <span className="inline-block px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-bold mt-2">
-                {currentUser.role}
-              </span>
-              {editMode && (
-                <p className="text-xs text-gray-500 mt-3 text-center">
-                  📷 คลิกที่ไอคอนกล้องเพื่ออัพโหลดรูปจาก PC<br />รองรับ: JPG, PNG, WEBP (สูงสุด 2MB)
-                </p>
-              )}
-            </div>
-
-            {/* Form */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <span className="text-lg">👤</span>ชื่อ-นามสกุล
-                </label>
-                <input type="text" disabled={!editMode} value={profileData.name} onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600" placeholder="ผู้ดูแลระบบ" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <span className="text-lg">📧</span>อีเมล
-                </label>
-                <input type="email" disabled={true} value={profileData.email}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed" placeholder="admin@company.com" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <span className="text-lg">📱</span>เบอร์โทรศัพท์
-                </label>
-                <input type="tel" disabled={!editMode} value={profileData.phone} onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600" placeholder="099-999-9999" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <span className="text-lg">💼</span>ตำแหน่ง
-                </label>
-                <input type="text" disabled={!editMode} value={profileData.position} onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600" placeholder="IT Administrator" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <span className="text-lg">🏢</span>แผนก
-                </label>
-                <select disabled={!editMode} value={profileData.department} onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600">
-                  {departments.map((dept) => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <span className="text-lg">📝</span>เกี่ยวกับฉัน
-                </label>
-                <textarea disabled={!editMode} value={profileData.bio} onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })} rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600 resize-none"
-                  placeholder="เขียนอะไรสักหน่อยเกี่ยวกับตัวคุณ..." />
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-4 justify-end pt-6 border-t-2 border-gray-100">
-              {!editMode ? (
-                <>
-                  <button onClick={() => setShowProfileModal(false)} className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all">ปิด</button>
-                  <button onClick={() => setEditMode(true)} className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">✏️ แก้ไข</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => { setEditMode(false); setProfileData({ name: currentUser.name, email: currentUser.email, phone: currentUser.phone || '099-999-9999', position: currentUser.position || 'IT Administrator', department: currentUser.department, bio: currentUser.bio || 'ผู้ดูแลระบบจัดการทรัพย์สินไอที', avatar: currentUser.avatar || '' }); }}
-                    className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all">❌ ยกเลิก</button>
-                  <button onClick={handleSaveProfile} className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">✅ บันทึก</button>
-                </>
-              )}
-            </div>
-          </>
-        );
-      })()}
-    </div>
-  </div>
-)}
-
+      {/* All Modals */}
+      {showAddAssetModal && <AddAssetModal />}
+      {showEditAssetModal && <EditAssetModal />}
+      {showDetailModal && <AssetDetailModal />}
+      {showDepartmentModal && <DepartmentModal />}
+      {showCategoryModal && <CategoryModal />}
+      {showAddRepairModal && <AddRepairModal />}
+      {showRepairHistoryModal && <RepairHistoryModal />}
+      {showInkTransactionModal && <InkTransactionModal />}
+      {showProfileModal && <ProfileModal />}
       {showSettingsModal && <SettingsModal />}
       {showAddTransactionModal && <AddTransactionModal />}
       {showInkBudgetModal && <InkBudgetModal />}
     </div>
   );
 };
-
 export default App;
