@@ -1463,58 +1463,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   {btn.label}
                 </button>
               ))}
-              <button className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110">⚙️</button>
-              
-              {/* User Menu */}
-              <div className="relative">
-                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-xl transition-all">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-lg">
-                    {currentUser.avatar}
-                  </div>
-                  <div className="text-left hidden lg:block">
-                    <p className="text-sm font-bold text-gray-900">{currentUser.name}</p>
-                    <p className="text-xs text-gray-500">{currentUser.role}</p>
-                  </div>
-                </button>
-                
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 z-50 animate-slideUp">
-                    <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg">
-                        {currentUser.avatar}
-                      </div>
-                      <div>
-                        <p className="font-bold text-lg text-gray-900">{currentUser.name}</p>
-                        <p className="text-sm text-gray-600">{currentUser.email}</p>
-                        <span className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold rounded-full">
-                          {currentUser.role}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                        <span className="text-2xl">🏢</span>
-                        <div>
-                          <p className="text-xs text-gray-600">แผนก</p>
-                          <p className="font-semibold text-gray-900">{currentUser.department}</p>
-                        </div>
-                      </div>
-                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
-                        <span className="text-xl">👤</span>
-                        <span className="font-medium text-gray-700">โปรไฟล์</span>
-                      </button>
-                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
-                        <span className="text-xl">⚙️</span>
-                        <span className="font-medium text-gray-700">ตั้งค่า</span>
-                      </button>
-                      <button className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600">
-                        <span className="text-xl">🚪</span>
-                        <span className="font-medium">ออกจากระบบ</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
