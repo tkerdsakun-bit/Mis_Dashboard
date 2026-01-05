@@ -1296,7 +1296,7 @@ const currentUser = propUser || {
         </div>
       </div>
     );
-  
+  };
 
 
   const SettingsModal = () => {
@@ -1995,6 +1995,5 @@ const currentUser = propUser || {
       {showInkBudgetModal && <InkBudgetModal />}
     </div>
   );
-};
 
 export default App;
