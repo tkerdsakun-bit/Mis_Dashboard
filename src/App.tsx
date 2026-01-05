@@ -1887,6 +1887,10 @@ const EditAssetModal = () => {
                         <span className="text-gray-600 font-medium">สถานะ:</span>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${asset.status === 'ใช้งาน' ? 'bg-green-100 text-green-700' : asset.status === 'ซ่อม' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'}`}>{asset.status}</span>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 font-medium">ราคา:</span>
+                        <span className="font-bold text-green-600 text-lg">฿{assigned_user}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
