@@ -22,6 +22,7 @@ export interface Asset {
   warranty_days: number;
   image_url?: string;
   created_at?: string;
+  assigned_user?: string;
 }
 
 export interface InkItem {
