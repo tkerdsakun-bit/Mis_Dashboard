@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction, User } from './supabaseClient';
+import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
 import QRCode from 'react-qr-code';
 
 
@@ -164,11 +164,7 @@ const AssetQRCode = ({ asset }: { asset: Asset }) => {
   );
 };
 
-interface AppProps {
-  currentUser?: User;
-  onLogout?: () => void;
-}
-const App = ({ currentUser: propUser, onLogout }: AppProps) => {
+const App = () => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [showAddAssetModal, setShowAddAssetModal] = useState<boolean>(false);
   const [showEditAssetModal, setShowEditAssetModal] = useState<boolean>(false);
@@ -191,55 +187,6 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
 
-  // Avatar Upload Handler
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      alert('❌ รองรับเฉพาะไฟล์ JPG, PNG, WEBP เท่านั้น');
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('❌ ขนาดไฟล์ต้องไม่เกิน 2MB');
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `avatar-${currentUser.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('assets')
-        .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('assets').getPublicUrl(filePath);
-      const avatarUrl = urlData.publicUrl;
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar: avatarUrl, updated_at: new Date().toISOString() })
-        .eq('id', currentUser.id);
-
-      if (updateError) throw updateError;
-
-      alert('✅ อัพเดตรูปโปรไฟล์สำเร็จ!');
-      window.location.reload();
-
-    } catch (error: any) {
-      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const [assets, setAssets] = useState<Asset[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
 const [, setInkInventory] = useState<InkItem[]>([]);
@@ -249,18 +196,13 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
 
   // User Info
-const currentUser = propUser || {
-  id: 0,
-  username: 'admin',
-  password: 'admin123',
-  name: 'Admin',
-  email: 'admin@company.com',
-  role: 'ผู้ดูแลระบบ',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
-  department: 'IT Department',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-};
+  const currentUser = {
+    name: 'Admin',
+    email: 'admin@company.com',
+    role: 'ผู้ดูแลระบบ',
+    avatar: '👤',
+    department: 'IT Department'
+  };
 
   const stats = [
     { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50' },
@@ -456,7 +398,7 @@ const currentUser = propUser || {
       const { error } = await supabase.from('repair_history').insert([repairData]);
       if (error) throw error;
       alert('✅ เพิ่มประวัติการซ่อมสำเร็จ');
-            setShowAddRepairModal(false);
+      setShowAddRepairModal(false);
       fetchAllData();
     } catch (error) {
       console.error('Error adding repair history:', error);
@@ -856,7 +798,7 @@ const currentUser = propUser || {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">🔧 เพิ่มการซ่อม</h2>
-                            <p className="text-gray-500 text-sm mt-1">บันทึกประวัติการซ่อมทรัพย์สิน</p>
+              <p className="text-gray-500 text-sm mt-1">บันทึกประวัติการซ่อมทรัพย์สิน</p>
             </div>
             <button onClick={() => setShowAddRepairModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
           </div>
@@ -1256,7 +1198,7 @@ const currentUser = propUser || {
               <p className="text-gray-300 text-sm mt-2">คลิกปุ่มด้านบนเพื่อเพิ่มรายการใหม่</p>
             </div>
           )}
-                  </div>
+        </div>
       </div>
     </div>
   );
@@ -1293,18 +1235,9 @@ const currentUser = propUser || {
               <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-6xl shadow-xl">
                 👤
               </div>
-              {/* Avatar Upload */}
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110 cursor-pointer">
+              <button className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110">
                 📷
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleAvatarUpload}
-                className="hidden"
-                disabled={uploading}
-              />
+              </button>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mt-4">{profileData.name}</h3>
             <p className="text-gray-500">{profileData.position}</p>
@@ -1320,37 +1253,36 @@ const currentUser = propUser || {
               </button>
             </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
-    <input type="text" disabled={!editMode} value={profileData.name || ''} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
-    <input type="email" disabled={!editMode} value={profileData.email || ''} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
-    <input type="tel" disabled={!editMode} value={profileData.phone || ''} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
-    <input type="text" disabled={!editMode} value={profileData.position || ''} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-  </div>
-</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
+                <input type="text" disabled={!editMode} value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
+                <input type="email" disabled={!editMode} value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
+                <input type="tel" disabled={!editMode} value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
+                <input type="text" disabled={!editMode} value={profileData.position} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+            </div>
 
-<div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 แผนก</label>
-  <select disabled={!editMode} value={profileData.department || ''} onChange={(e) => setProfileData({...profileData, department: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed">
-    {departments.map(dept => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
-  </select>
-</div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 แผนก</label>
+              <select disabled={!editMode} value={profileData.department} onChange={(e) => setProfileData({...profileData, department: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed">
+                {departments.map(dept => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
+              </select>
+            </div>
 
-<div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">📝 เกี่ยวกับฉัน</label>
-  <textarea rows={3} disabled={!editMode} value={profileData.bio || ''} onChange={(e) => setProfileData({...profileData, bio: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-</div>
-
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📝 เกี่ยวกับฉัน</label>
+              <textarea rows={3} disabled={!editMode} value={profileData.bio} onChange={(e) => setProfileData({...profileData, bio: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+            </div>
 
             {editMode && (
               <div className="flex gap-4 pt-4">
@@ -1559,56 +1491,27 @@ const currentUser = propUser || {
                         </span>
                       </div>
                     </div>
-<div className="space-y-2">
-  <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-    <span className="text-2xl">🏢</span>
-    <div>
-      <p className="text-xs text-gray-600">แผนก</p>
-      <p className="font-semibold text-gray-900">{currentUser.department}</p>
-    </div>
-  </div>
-  
-  {/* ปุ่มโปรไฟล์ */}
-  <button 
-    onClick={() => {
-      setShowProfileModal(true);
-      setShowUserMenu(false);
-    }}
-    className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3"
-  >
-    <span className="text-xl">👤</span>
-    <span className="font-medium text-gray-700">โปรไฟล์</span>
-  </button>
-  
-  {/* ปุ่มตั้งค่า */}
-  <button 
-    onClick={() => {
-      setShowSettingsModal(true);
-      setShowUserMenu(false);
-    }}
-    className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3"
-  >
-    <span className="text-xl">⚙️</span>
-    <span className="font-medium text-gray-700">ตั้งค่า</span>
-  </button>
-  
-  {/* ปุ่มออกจากระบบ */}
-  <button 
-    onClick={() => {
-      if (onLogout) {
-        onLogout();
-      } else {
-        alert('⚠️ กรุณาใช้งานผ่านระบบ Login');
-      }
-      setShowUserMenu(false);
-    }}
-    className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600"
-  >
-    <span className="text-xl">🚪</span>
-    <span className="font-medium">ออกจากระบบ</span>
-  </button>
-</div>
-
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                        <span className="text-2xl">🏢</span>
+                        <div>
+                          <p className="text-xs text-gray-600">แผนก</p>
+                          <p className="font-semibold text-gray-900">{currentUser.department}</p>
+                        </div>
+                      </div>
+                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
+                        <span className="text-xl">👤</span>
+                        <span className="font-medium text-gray-700">โปรไฟล์</span>
+                      </button>
+                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
+                        <span className="text-xl">⚙️</span>
+                        <span className="font-medium text-gray-700">ตั้งค่า</span>
+                      </button>
+                      <button className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600">
+                        <span className="text-xl">🚪</span>
+                        <span className="font-medium">ออกจากระบบ</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
