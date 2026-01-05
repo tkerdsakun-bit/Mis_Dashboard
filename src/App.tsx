@@ -1988,8 +1988,8 @@ const currentUser = propUser || {
       })()}
     </div>
   </div>
-)}
+    </div>
+  );
+};
 
-{showSettingsModal && <SettingsModal />}
-{showAddTransactionModal && <AddTransactionModal />}
-{showInkBudgetModal && <InkBudgetModal />}
+export default App;
