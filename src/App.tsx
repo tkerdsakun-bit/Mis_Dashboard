@@ -1,168 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction, User } from './supabaseClient';
-import QRCode from 'react-qr-code';
-
-
-// QR Code Component
-const AssetQRCode = ({ asset }: { asset: Asset }) => {
-  const qrValue = `${window.location.origin}/asset/${asset.id}`;
-
-  const downloadQR = () => {
-    const svg = document.querySelector(`#qr-container-${asset.id} svg`);
-    if (!svg) return;
-
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    canvas.width = 240;
-    canvas.height = 240;
-
-    img.onload = () => {
-      if (ctx) {
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, 240, 240);
-        ctx.drawImage(img, 20, 20, 200, 200);
-      }
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `QR-${asset.tag}.png`;
-      link.href = url;
-      link.click();
-    };
-
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-  };
-
-  const printQR = () => {
-    const svg = document.querySelector(`#qr-container-${asset.id} svg`);
-    if (!svg) return;
-
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const svgBase64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>QR Code - ${asset.tag}</title>
-          <meta charset="UTF-8">
-          <style>
-            @media print {
-              @page { margin: 0; size: A4; }
-              body { margin: 1.5cm; }
-            }
-            body { 
-              display: flex; flex-direction: column;
-              align-items: center; justify-content: center;
-              min-height: 100vh; margin: 0;
-              font-family: 'Sarabun', 'Tahoma', 'Arial', sans-serif;
-              background: white;
-            }
-            .container {
-              text-align: center; padding: 20px;
-              border: 3px solid #2563eb; border-radius: 15px;
-              background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              max-width: 400px;
-            }
-            .header {
-              font-size: 24px; font-weight: bold; margin-bottom: 15px;
-              color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;
-            }
-            .asset-name {
-              font-size: 28px; font-weight: bold; margin: 15px 0; color: #1f2937;
-            }
-            .qr-container {
-              margin: 20px auto; padding: 15px; background: white;
-              border: 2px solid #e5e7eb; border-radius: 10px; display: inline-block;
-            }
-            .info {
-              font-size: 16px; margin: 8px 0; color: #374151;
-              display: flex; justify-content: space-between; align-items: center;
-              padding: 8px 15px; background: #f3f4f6; border-radius: 8px;
-            }
-            .info-label { font-weight: bold; color: #4b5563; }
-            .info-value { color: #1f2937; }
-            .footer {
-              margin-top: 20px; padding-top: 15px;
-              border-top: 2px solid #e5e7eb; font-size: 14px; color: #6b7280;
-            }
-            .scan-text {
-              font-size: 16px; color: #3b82f6; font-weight: 600; margin-top: 10px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">🏢 ระบบจัดการทรัพย์สิน IT</div>
-            <div class="asset-name">${asset.name}</div>
-            <div class="qr-container">
-              <img src="${svgBase64}" width="200" height="200" alt="QR Code" />
-            </div>
-            <div class="info">
-              <span class="info-label">🏷️ Asset Tag:</span>
-              <span class="info-value">${asset.tag}</span>
-            </div>
-            <div class="info">
-              <span class="info-label">🏢 แผนก:</span>
-              <span class="info-value">${asset.location}</span>
-            </div>
-            <div class="info">
-              <span class="info-label">📦 ประเภท:</span>
-              <span class="info-value">${asset.category}</span>
-            </div>
-            <div class="footer">
-              <div class="scan-text">📱 สแกน QR Code เพื่อดูข้อมูลทรัพย์สิน</div>
-              <div style="margin-top: 10px; font-size: 12px;">พร้อมประวัติการซ่อมและข้อมูลการรับประกัน</div>
-            </div>
-          </div>
-          <script>
-            window.onload = () => { setTimeout(() => { window.print(); }, 500); };
-          </script>
-        </body>
-      </html>
-    `);
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border-2 border-blue-200">
-      <h4 className="font-bold text-lg text-gray-900">📱 QR Code สำหรับทรัพย์สิน</h4>
-      <div id={`qr-container-${asset.id}`} className="bg-white p-4 rounded-xl shadow-lg">
-        <QRCode
-          value={qrValue}
-          size={200}
-          level="H"
-          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-        />
-      </div>
-      <p className="text-sm text-gray-600 font-semibold">{asset.tag}</p>
-      <p className="text-xs text-gray-500 text-center">
-        สแกน QR Code เพื่อดูข้อมูลทรัพย์สิน<br/>
-        พร้อมประวัติการซ่อมและข้อมูลการรับประกัน
-      </p>
-      <div className="flex gap-3 w-full">
-        <button
-          onClick={downloadQR}
-          className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
-        >
-          <span className="text-xl">📥</span>
-          ดาวน์โหลด
-        </button>
-        <button
-          onClick={printQR}
-          className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
-        >
-          <span className="text-xl">🖨️</span>
-          พิมพ์
-        </button>
-      </div>
-    </div>
-  );
-};
+import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
@@ -176,7 +14,10 @@ const App = () => {
   const [showAddRepairModal, setShowAddRepairModal] = useState<boolean>(false);
   const [showInkTransactionModal, setShowInkTransactionModal] = useState<boolean>(false);
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
+  const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
+  const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
@@ -193,6 +34,13 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
 
   // User Info
+  const currentUser = {
+    name: 'Admin',
+    email: 'admin@company.com',
+    role: 'ผู้ดูแลระบบ',
+    avatar: '👤',
+    department: 'IT Department'
+  };
 
   const stats = [
     { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50' },
@@ -388,7 +236,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       const { error } = await supabase.from('repair_history').insert([repairData]);
       if (error) throw error;
       alert('✅ เพิ่มประวัติการซ่อมสำเร็จ');
-            setShowAddRepairModal(false);
+      setShowAddRepairModal(false);
       fetchAllData();
     } catch (error) {
       console.error('Error adding repair history:', error);
@@ -646,10 +494,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
           {selectedAsset && (
             <div className="space-y-6">
               {selectedAsset.image_url && <img src={selectedAsset.image_url} alt={selectedAsset.name} className="w-full h-72 object-cover rounded-2xl shadow-xl" />}
-
-              {/* เพิ่ม QR Code Component ตรงนี้ 👇 */}
-              <AssetQRCode asset={selectedAsset} />
-
               <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-100">
                 <div className="flex items-center gap-5 mb-5">
                   <span className="text-6xl">{selectedAsset.icon}</span>
@@ -788,7 +632,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">🔧 เพิ่มการซ่อม</h2>
-                            <p className="text-gray-500 text-sm mt-1">บันทึกประวัติการซ่อมทรัพย์สิน</p>
+              <p className="text-gray-500 text-sm mt-1">บันทึกประวัติการซ่อมทรัพย์สิน</p>
             </div>
             <button onClick={() => setShowAddRepairModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
           </div>
@@ -1188,7 +1032,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
               <p className="text-gray-300 text-sm mt-2">คลิกปุ่มด้านบนเพื่อเพิ่มรายการใหม่</p>
             </div>
           )}
-                  </div>
+        </div>
       </div>
     </div>
   );
@@ -1196,5 +1040,582 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 
 
 
-}
+  const ProfileModal = () => {
+    const [editMode, setEditMode] = useState(false);
+    const [profileData, setProfileData] = useState({
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: '099-999-9999',
+      position: 'IT Administrator',
+      department: currentUser.department,
+      bio: 'ผู้ดูแลระบบจัดการทรัพย์สินไอที'
+    });
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
+                👤 โปรไฟล์ของฉัน
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">จัดการข้อมูลส่วนตัวของคุณ</p>
+            </div>
+            <button onClick={() => setShowProfileModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">×</button>
+          </div>
+
+          <div className="flex flex-col items-center mb-8">
+            <div className="relative">
+              <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-6xl shadow-xl">
+                👤
+              </div>
+              <button className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all hover:scale-110">
+                📷
+              </button>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mt-4">{profileData.name}</h3>
+            <p className="text-gray-500">{profileData.position}</p>
+            <span className="mt-2 px-4 py-1 bg-blue-100 text-blue-700 text-sm rounded-full font-semibold">
+              {currentUser.role}
+            </span>
+          </div>
+
+          <div className="space-y-5">
+            <div className="flex justify-end">
+              <button onClick={() => setEditMode(!editMode)} className={`px-6 py-2 rounded-xl font-semibold transition-all ${editMode ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl'}`}>
+                {editMode ? '❌ ยกเลิก' : '✏️ แก้ไขข้อมูล'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
+                <input type="text" disabled={!editMode} value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
+                <input type="email" disabled={!editMode} value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
+                <input type="tel" disabled={!editMode} value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
+                <input type="text" disabled={!editMode} value={profileData.position} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 แผนก</label>
+              <select disabled={!editMode} value={profileData.department} onChange={(e) => setProfileData({...profileData, department: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed">
+                {departments.map(dept => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📝 เกี่ยวกับฉัน</label>
+              <textarea rows={3} disabled={!editMode} value={profileData.bio} onChange={(e) => setProfileData({...profileData, bio: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+            </div>
+
+            {editMode && (
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => { alert('✅ บันทึกข้อมูลสำเร็จ!\n(นี่คือ Demo - ไม่มีการบันทึกจริง)'); setEditMode(false); }} className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
+                  💾 บันทึกข้อมูล
+                </button>
+                <button onClick={() => setEditMode(false)} className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all">
+                  ยกเลิก
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  const SettingsModal = () => {
+    const [settings, setSettings] = useState({
+      theme: 'light',
+      language: 'th',
+      notifications: true,
+      emailNotif: true,
+      autoBackup: false,
+      itemsPerPage: '20'
+    });
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-3">
+                ⚙️ ตั้งค่าระบบ
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">ปรับแต่งการใช้งานตามที่คุณต้องการ</p>
+            </div>
+            <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">×</button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🎨 รูปแบบการแสดงผล</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setSettings({...settings, theme: 'light'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'light' ? 'border-blue-500 bg-white shadow-lg scale-105' : 'border-gray-200 bg-white hover:border-blue-300'}`}>
+                  <div className="text-3xl mb-2">☀️</div>
+                  <div className="font-semibold">สว่าง (Light)</div>
+                </button>
+                <button onClick={() => setSettings({...settings, theme: 'dark'})} className={`p-4 rounded-xl border-2 transition-all ${settings.theme === 'dark' ? 'border-blue-500 bg-gray-800 text-white shadow-lg scale-105' : 'border-gray-200 bg-gray-800 text-white hover:border-blue-300'}`}>
+                  <div className="text-3xl mb-2">🌙</div>
+                  <div className="font-semibold">มืด (Dark)</div>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🌐 ภาษา</h3>
+              <select value={settings.language} onChange={(e) => setSettings({...settings, language: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all">
+                <option value="th">🇹🇭 ไทย (Thai)</option>
+                <option value="en">🇺🇸 English</option>
+              </select>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🔔 การแจ้งเตือน</h3>
+              <div className="space-y-3">
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔔</span>
+                    <div>
+                      <div className="font-semibold text-gray-900">แจ้งเตือนในระบบ</div>
+                      <div className="text-sm text-gray-500">แสดงการแจ้งเตือนทั่วไป</div>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={settings.notifications} onChange={(e) => setSettings({...settings, notifications: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                </label>
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📧</span>
+                    <div>
+                      <div className="font-semibold text-gray-900">อีเมลแจ้งเตือน</div>
+                      <div className="text-sm text-gray-500">ส่งการแจ้งเตือนไปอีเมล</div>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={settings.emailNotif} onChange={(e) => setSettings({...settings, emailNotif: e.target.checked})} className="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-100">
+              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">🛠️ ระบบ</h3>
+              <div className="space-y-4">
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">💾</span>
+                    <div>
+                      <div className="font-semibold text-gray-900">สำรองข้อมูลอัตโนมัติ</div>
+                      <div className="text-sm text-gray-500">สำรองข้อมูลทุกวัน</div>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={settings.autoBackup} onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})} className="w-6 h-6 text-orange-600 rounded focus:ring-2 focus:ring-orange-500" />
+                </label>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">📊 จำนวนรายการต่อหน้า</label>
+                  <select value={settings.itemsPerPage} onChange={(e) => setSettings({...settings, itemsPerPage: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
+                    <option value="10">10 รายการ</option>
+                    <option value="20">20 รายการ</option>
+                    <option value="50">50 รายการ</option>
+                    <option value="100">100 รายการ</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button onClick={() => { alert('✅ บันทึกการตั้งค่าสำเร็จ!\n(นี่คือ Demo - ไม่มีการบันทึกจริง)'); setShowSettingsModal(false); }} className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
+                💾 บันทึกการตั้งค่า
+              </button>
+              <button onClick={() => setShowSettingsModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-8xl mb-6 animate-bounce">⏳</div>
+          <p className="text-2xl font-bold text-gray-700 mb-2">กำลังโหลดข้อมูล...</p>
+          <div className="flex gap-2 justify-center mt-4">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+            <div className="w-3 h-3 bg-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.4s ease-out; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      `}</style>
+
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-lg sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-3 rounded-2xl shadow-xl">
+                <span className="text-3xl">📦</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">ระบบจัดการทรัพย์สิน</h1>
+                <p className="text-xs text-gray-500 font-medium">IT Asset Management System 2026</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {[
+                { onClick: () => setShowDepartmentModal(true), color: 'from-gray-500 to-gray-600', label: '🏢' },
+                { onClick: () => setShowCategoryModal(true), color: 'from-indigo-500 to-blue-500', label: '📂' },
+                { onClick: () => setShowRepairHistoryModal(true), color: 'from-orange-500 to-red-500', label: '🔧' },
+                { onClick: () => setShowInkTransactionModal(true), color: 'from-green-500 to-emerald-500', label: '💰' }
+              ].map((btn, idx) => (
+                <button key={idx} onClick={btn.onClick} className={`hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r ${btn.color} text-white hover:shadow-2xl rounded-xl text-xl font-semibold transition-all hover:scale-110`}>
+                  {btn.label}
+                </button>
+              ))}
+              <button className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110">⚙️</button>
+              
+              {/* User Menu */}
+              <div className="relative">
+                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-xl transition-all">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-lg">
+                    {currentUser.avatar}
+                  </div>
+                  <div className="text-left hidden lg:block">
+                    <p className="text-sm font-bold text-gray-900">{currentUser.name}</p>
+                    <p className="text-xs text-gray-500">{currentUser.role}</p>
+                  </div>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 z-50 animate-slideUp">
+                    <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg">
+                        {currentUser.avatar}
+                      </div>
+                      <div>
+                        <p className="font-bold text-lg text-gray-900">{currentUser.name}</p>
+                        <p className="text-sm text-gray-600">{currentUser.email}</p>
+                        <span className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold rounded-full">
+                          {currentUser.role}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                        <span className="text-2xl">🏢</span>
+                        <div>
+                          <p className="text-xs text-gray-600">แผนก</p>
+                          <p className="font-semibold text-gray-900">{currentUser.department}</p>
+                        </div>
+                      </div>
+                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
+                        <span className="text-xl">👤</span>
+                        <span className="font-medium text-gray-700">โปรไฟล์</span>
+                      </button>
+                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
+                        <span className="text-xl">⚙️</span>
+                        <span className="font-medium text-gray-700">ตั้งค่า</span>
+                      </button>
+                      <button className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600">
+                        <span className="text-xl">🚪</span>
+                        <span className="font-medium">ออกจากระบบ</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="bg-white/60 backdrop-blur-xl border-b border-gray-200 shadow-md sticky top-20 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex gap-2">
+            {[
+              { page: 'dashboard', icon: '🏠', label: 'แดชบอร์ด' },
+              { page: 'assets', icon: '📦', label: 'ทรัพย์สิน' }
+            ].map((nav) => (
+              <button key={nav.page} onClick={() => setCurrentPage(nav.page)} className={`px-6 py-4 font-semibold flex items-center gap-2 border-b-4 transition-all ${currentPage === nav.page ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50/50'}`}>
+                <span className="text-lg">{nav.icon}</span>
+                {nav.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        {currentPage === 'dashboard' ? (
+          <div className="space-y-8">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {stats.map((stat, idx) => (
+                <div key={idx} className={`${stat.bgColor} rounded-2xl p-7 border-2 border-gray-200 hover:shadow-2xl hover:scale-105 transition-all cursor-pointer backdrop-blur-sm`}>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className={`bg-gradient-to-br ${stat.color} p-4 rounded-xl shadow-xl`}>
+                      <span className="text-white text-2xl">{stat.icon}</span>
+                    </div>
+                    <span className="text-sm text-gray-700 font-semibold">{stat.label}</span>
+                  </div>
+                  <div className="text-4xl font-bold text-gray-900">{stat.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* รายรับ-รายจ่ายหมึก Widget */}
+            <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-3xl p-8 border-2 border-green-200 shadow-2xl">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
+                    💰 รายรับ-รายจ่ายหมึกเดือนนี้
+                  </h2>
+                  <p className="text-gray-600 text-base mt-2 font-medium">
+                    📅 {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long' })} 
+                    <span className="ml-3 text-sm">({monthlyTransactions.length} รายการ)</span>
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={exportInkTransactions} className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
+                    📥 Export
+                  </button>
+                  <button onClick={() => setShowInkTransactionModal(true)} className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2">
+                    📋 ดูทั้งหมด →
+                  </button>
+                </div>
+              </div>
+
+              {/* สรุปยอด 3 การ์ด */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white rounded-2xl p-8 border-2 border-red-100 shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="bg-gradient-to-br from-red-500 to-pink-500 p-4 rounded-2xl shadow-lg">
+                      <span className="text-5xl">💸</span>
+                    </div>
+                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">
+                      {monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').length} รายการ
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium mb-2">รายจ่ายทั้งหมด</p>
+                  <p className="text-5xl font-bold text-red-600 mb-3">฿{totalExpense.toLocaleString()}</p>
+                  <div className="w-full bg-red-100 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-red-500 to-pink-500 h-2 rounded-full shadow-lg transition-all duration-1000" style={{ width: totalExpense > 0 ? '100%' : '0%' }}></div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-8 border-2 border-green-100 shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-4 rounded-2xl shadow-lg">
+                      <span className="text-5xl">💵</span>
+                    </div>
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                      {monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').length} รายการ
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium mb-2">รายรับทั้งหมด</p>
+                  <p className="text-5xl font-bold text-green-600 mb-3">฿{totalIncome.toLocaleString()}</p>
+                  <div className="w-full bg-green-100 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full shadow-lg transition-all duration-1000" style={{ width: totalIncome > 0 ? '100%' : '0%' }}></div>
+                  </div>
+                </div>
+
+                <div className={`bg-white rounded-2xl p-8 border-2 ${netAmount >= 0 ? 'border-blue-100' : 'border-orange-100'} shadow-xl hover:shadow-2xl hover:scale-105 transition-all`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-red-500'} p-4 rounded-2xl shadow-lg`}>
+                      <span className="text-5xl">{netAmount >= 0 ? '📈' : '📉'}</span>
+                    </div>
+                    <span className={`${netAmount >= 0 ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'} px-3 py-1 rounded-full text-xs font-bold`}>
+                      {netAmount >= 0 ? 'กำไร' : 'ขาดทุน'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium mb-2">ยอดสุทธิ</p>
+                  <p className={`text-5xl font-bold ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'} mb-3`}>
+                    {netAmount >= 0 ? '+' : ''}฿{Math.abs(netAmount).toLocaleString()}
+                  </p>
+                  <div className={`w-full ${netAmount >= 0 ? 'bg-blue-100' : 'bg-orange-100'} rounded-full h-2`}>
+                    <div className={`bg-gradient-to-r ${netAmount >= 0 ? 'from-blue-500 to-cyan-500' : 'from-orange-500 to-red-500'} h-2 rounded-full shadow-lg transition-all duration-1000`} style={{ width: '100%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* กราฟเปรียบเทียบ */}
+              <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-xl">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  📊 เปรียบเทียบรายรับ-รายจ่าย
+                </h3>
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">💸</span>
+                        <span className="font-semibold text-gray-700">รายจ่าย</span>
+                      </div>
+                      <span className="text-2xl font-bold text-red-600">฿{totalExpense.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-8 shadow-inner">
+                      <div 
+                        className="bg-gradient-to-r from-red-500 to-pink-500 h-8 rounded-full shadow-lg flex items-center justify-end pr-4 text-white text-sm font-bold transition-all duration-1000" 
+                        style={{ width: `${totalExpense > 0 && (totalExpense + totalIncome) > 0 ? (totalExpense / (totalExpense + totalIncome)) * 100 : 0}%`, minWidth: totalExpense > 0 ? '80px' : '0' }}
+                      >
+                        {totalExpense > 0 ? `${((totalExpense / (totalExpense + totalIncome)) * 100).toFixed(1)}%` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">💵</span>
+                        <span className="font-semibold text-gray-700">รายรับ</span>
+                      </div>
+                      <span className="text-2xl font-bold text-green-600">฿{totalIncome.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-8 shadow-inner">
+                      <div 
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-8 rounded-full shadow-lg flex items-center justify-end pr-4 text-white text-sm font-bold transition-all duration-1000" 
+                        style={{ width: `${totalIncome > 0 && (totalExpense + totalIncome) > 0 ? (totalIncome / (totalExpense + totalIncome)) * 100 : 0}%`, minWidth: totalIncome > 0 ? '80px' : '0' }}
+                      >
+                        {totalIncome > 0 ? `${((totalIncome / (totalExpense + totalIncome)) * 100).toFixed(1)}%` : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Distribution */}
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border-2 border-gray-200 shadow-2xl">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+                📊 ทรัพย์สินแยกตามประเภท
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                {categoryData.map((cat) => (
+                  <div key={cat.id} className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-2xl text-center border-2 border-gray-200 hover:shadow-2xl hover:scale-105 transition-all cursor-pointer">
+                    <span className="text-6xl block mb-3">{cat.icon}</span>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">{cat.name}</p>
+                    <p className="text-4xl font-bold text-gray-900 mb-1">{cat.count}</p>
+                    <p className="text-xs text-gray-500 font-medium">{cat.percent}% ของทั้งหมด</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">ทรัพย์สิน ({filteredAssets.length})</h1>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAddAssetModal(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">➕ เพิ่ม</button>
+                <button onClick={exportToExcel} className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">📥 Export</button>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-gray-200 shadow-xl">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
+                  <input type="text" placeholder="ค้นหา..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-14 pr-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                </div>
+                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                  <option>ทั้งหมด</option>
+                  {assetCategories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
+                </select>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                  <option>ทั้งหมด</option>
+                  <option>ใช้งาน</option>
+                  <option>ซ่อม</option>
+                  <option>เก็บคลัง</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredAssets.map(asset => (
+                <div key={asset.id} className="bg-white/80 backdrop-blur-xl rounded-2xl overflow-hidden border-2 border-gray-200 hover:shadow-2xl hover:scale-105 transition-all cursor-pointer group" onClick={() => { setSelectedAsset(asset); setShowDetailModal(true); }}>
+                  {asset.image_url ? (
+                    <img src={asset.image_url} alt={asset.name} className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-56 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+                      <span className="text-8xl group-hover:scale-110 transition-transform duration-500">{asset.icon}</span>
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <h3 className="font-bold text-xl text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">{asset.name}</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 font-medium">รหัส:</span>
+                        <code className="bg-blue-50 px-3 py-1 rounded-lg text-blue-600 font-semibold">{asset.tag}</code>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 font-medium">แผนก:</span>
+                        <span className="font-semibold text-gray-900">{asset.location}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 font-medium">ราคา:</span>
+                        <span className="font-bold text-green-600 text-lg">฿{asset.price}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 font-medium">สถานะ:</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${asset.status === 'ใช้งาน' ? 'bg-green-100 text-green-700' : asset.status === 'ซ่อม' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'}`}>{asset.status}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredAssets.length === 0 && (
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-20 text-center border-2 border-gray-200 shadow-2xl">
+                <span className="text-9xl mb-6 block animate-bounce">🔍</span>
+                <p className="text-3xl font-bold text-gray-700 mb-3">ไม่พบทรัพย์สิน</p>
+                <p className="text-gray-500 text-lg">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* All Modals */}
+      {showAddAssetModal && <AddAssetModal />}
+      {showEditAssetModal && <EditAssetModal />}
+      {showDetailModal && <AssetDetailModal />}
+      {showDepartmentModal && <DepartmentModal />}
+      {showCategoryModal && <CategoryModal />}
+      {showAddRepairModal && <AddRepairModal />}
+      {showRepairHistoryModal && <RepairHistoryModal />}
+      {showInkTransactionModal && <InkTransactionModal />}
+      {showProfileModal && <ProfileModal />}
+      {showSettingsModal && <SettingsModal />}
+      {showAddTransactionModal && <AddTransactionModal />}
+      {showInkBudgetModal && <InkBudgetModal />}
+    </div>
+  );
+};
 export default App;
