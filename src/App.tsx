@@ -1988,6 +1988,11 @@ const currentUser = propUser || {
       })()}
     </div>
   </div>
+)}
+
+      {showSettingsModal && <SettingsModal />}
+      {showAddTransactionModal && <AddTransactionModal />}
+      {showInkBudgetModal && <InkBudgetModal />}
     </div>
   );
 };
