@@ -101,9 +101,9 @@ const AssetDetail = () => {
         </div>
 
         {/* Asset Image */}
-        {asset.imageurl && (
+        {asset.image_url && (
           <img
-            src={asset.imageurl}
+            src={asset.image_url}
             alt={asset.name}
             className="w-full h-80 object-cover rounded-2xl shadow-xl mb-8"
           />
@@ -118,12 +118,12 @@ const AssetDetail = () => {
             { label: '📊 สถานะ', value: asset.status, 
               color: asset.status === 'ปกติ' ? 'text-green-600' : 
                      asset.status === 'ซ่อม' ? 'text-orange-600' : 'text-red-600' },
-            { label: '📅 วันที่ซื้อ', value: asset.purchasedate },
-            { label: '🛡️ การรับประกันหมดอายุ', value: asset.warrantyexpiry, 
-              color: asset.warrantydays < 30 ? 'text-red-600' : 'text-green-600' },
+            { label: '📅 วันที่ซื้อ', value: asset.purchase_date },
+            { label: '🛡️ การรับประกันหมดอายุ', value: asset.warranty_expiry, 
+              color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' },
             { label: '💰 ราคา', value: `฿${asset.price}`, color: 'text-green-600' },
-            { label: '⏰ วันรับประกันคงเหลือ', value: `${asset.warrantydays} วัน`,
-              color: asset.warrantydays < 30 ? 'text-red-600' : 'text-green-600' }
+            { label: '⏰ วันรับประกันคงเหลือ', value: `${asset.warranty_days} วัน`,
+              color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' }
           ].map((item, idx) => (
             <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-gray-200 hover:shadow-lg transition-all">
               <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
@@ -144,20 +144,20 @@ const AssetDetail = () => {
               {repairs.map(repair => (
                 <div key={repair.id} className="bg-white p-5 rounded-xl border border-orange-100 hover:shadow-lg transition-all">
                   <div className="flex justify-between items-start mb-3">
-                    <p className="font-semibold text-gray-900 text-lg">{repair.issuedescription}</p>
+                    <p className="font-semibold text-gray-900 text-lg">{repair.issue_description}</p>
                     <span className={`px-4 py-1 rounded-full text-xs font-bold ${
-                      repair.repairstatus === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' :
-                      repair.repairstatus === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' :
+                      repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' :
+                      repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
-                      {repair.repairstatus}
+                      {repair.repair_status}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
-                    <p>💰 ค่าใช้จ่าย: <span className="font-bold text-red-600">฿{repair.repaircost.toLocaleString()}</span></p>
+                    <p>💰 ค่าใช้จ่าย: <span className="font-bold text-red-600">฿{repair.repair_cost.toLocaleString()}</span></p>
                     <p>👨‍🔧 ช่าง: <span className="font-semibold">{repair.technician || '-'}</span></p>
-                    <p>📅 วันที่เริ่ม: {repair.startdate}</p>
-                    <p>✅ วันที่เสร็จ: {repair.enddate || '-'}</p>
+                    <p>📅 วันที่เริ่ม: {repair.start_date}</p>
+                    <p>✅ วันที่เสร็จ: {repair.end_date || '-'}</p>
                   </div>
                   {repair.notes && (
                     <p className="mt-3 pt-3 border-t border-orange-200 text-sm text-gray-600">
