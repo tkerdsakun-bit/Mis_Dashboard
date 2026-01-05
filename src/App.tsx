@@ -398,7 +398,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       const { error } = await supabase.from('repair_history').insert([repairData]);
       if (error) throw error;
       alert('✅ เพิ่มประวัติการซ่อมสำเร็จ');
-      setShowAddRepairModal(false);
+            setShowAddRepairModal(false);
       fetchAllData();
     } catch (error) {
       console.error('Error adding repair history:', error);
@@ -798,7 +798,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">🔧 เพิ่มการซ่อม</h2>
-              <p className="text-gray-500 text-sm mt-1">บันทึกประวัติการซ่อมทรัพย์สิน</p>
+                            <p className="text-gray-500 text-sm mt-1">บันทึกประวัติการซ่อมทรัพย์สิน</p>
             </div>
             <button onClick={() => setShowAddRepairModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
           </div>
@@ -1198,7 +1198,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
               <p className="text-gray-300 text-sm mt-2">คลิกปุ่มด้านบนเพื่อเพิ่มรายการใหม่</p>
             </div>
           )}
-        </div>
+                  </div>
       </div>
     </div>
   );
@@ -1498,7 +1498,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                           <p className="text-xs text-gray-600">แผนก</p>
                           <p className="font-semibold text-gray-900">{currentUser.department}</p>
                         </div>
-                      </div>
+                                              </div>
                       <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
                         <span className="text-xl">👤</span>
                         <span className="font-medium text-gray-700">โปรไฟล์</span>
