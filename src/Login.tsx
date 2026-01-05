@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { supabase } from './supabaseClient';
+import type { User } from './supabaseClient';
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (user: User) => void;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
@@ -10,27 +12,40 @@ const Login = ({ onLogin }: LoginProps) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Check credentials
-    if (username === 'admin' && password === 'admin123') {
+    try {
+      // Query user from Supabase
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
+
+      if (error || !data) {
+        setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        setIsLoading(false);
+        return;
+      }
+
       // Save to localStorage
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('username', username);
+      localStorage.setItem('userId', data.id.toString());
+      localStorage.setItem('username', data.username);
       localStorage.setItem('loginTime', new Date().toISOString());
 
       setTimeout(() => {
         setIsLoading(false);
-        onLogin();
+        onLogin(data as User);
       }, 500);
-    } else {
-      setTimeout(() => {
-        setIsLoading(false);
-        setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-      }, 500);
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      setIsLoading(false);
     }
   };
 
@@ -65,6 +80,7 @@ const Login = ({ onLogin }: LoginProps) => {
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
               placeholder="admin"
               required
+              autoFocus
             />
           </div>
 

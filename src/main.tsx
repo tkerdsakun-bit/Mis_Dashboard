@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { supabase } from './supabaseClient';
+import type { User } from './supabaseClient';
 import App from './App';
 import AssetDetail from './AssetDetail';
 import Login from './Login';
@@ -8,24 +10,54 @@ import './index.css';
 
 const AppWithAuth = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    setIsLoggedIn(loggedIn);
-    setIsChecking(false);
+    checkLoginStatus();
   }, []);
 
-  const handleLogin = () => {
+  const checkLoginStatus = async () => {
+    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userId = localStorage.getItem('userId');
+
+    if (loggedIn && userId) {
+      try {
+        // Fetch user data from Supabase
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', parseInt(userId))
+          .single();
+
+        if (error || !data) {
+          // Invalid session, logout
+          handleLogout();
+        } else {
+          setCurrentUser(data as User);
+          setIsLoggedIn(true);
+        }
+      } catch (err) {
+        console.error('Error checking login status:', err);
+        handleLogout();
+      }
+    }
+
+    setIsChecking(false);
+  };
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
     setIsLoggedIn(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userId');
     localStorage.removeItem('username');
     localStorage.removeItem('loginTime');
     setIsLoggedIn(false);
+    setCurrentUser(null);
   };
 
   if (isChecking) {
@@ -39,14 +71,14 @@ const AppWithAuth = () => {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || !currentUser) {
     return <Login onLogin={handleLogin} />;
   }
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App onLogout={handleLogout} />} />
+        <Route path="/" element={<App currentUser={currentUser} onLogout={handleLogout} />} />
         <Route path="/asset/:assetId" element={<AssetDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
