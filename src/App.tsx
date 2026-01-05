@@ -1206,7 +1206,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 
 
 
-  // Borrow Modal - NEW
+  // ========== BORROW MODALS ==========
   const BorrowModal = () => {
     const [formData, setFormData] = useState({
       asset_id: selectedAsset?.id || 0,
@@ -1338,7 +1338,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
     );
   };
 
-  // Borrow History Modal - NEW
   const BorrowHistoryModal = () => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
@@ -1358,14 +1357,14 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
         </div>
 
         <div className="space-y-4">
-          {borrowRecords.map(borrow => (
+          {borrowRecords.map((borrow: BorrowRecord) => (
             <div
               key={borrow.id}
-              className={`bg-gradient-to-r ${'${'}
+              className={`bg-gradient-to-r ${
                 borrow.return_date
                   ? 'from-gray-50 to-gray-100 border-gray-200'
                   : 'from-purple-50 to-pink-50 border-purple-200'
-              ${'}'} border-2 rounded-2xl p-6 hover:shadow-2xl transition-all`}
+              } border-2 rounded-2xl p-6 hover:shadow-2xl transition-all`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -1373,11 +1372,11 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   <p className="text-sm text-gray-600">รหัส: {borrow.asset_code}</p>
                 </div>
                 <span
-                  className={`px-4 py-2 rounded-full text-sm font-bold ${'${'}
+                  className={`px-4 py-2 rounded-full text-sm font-bold ${
                     borrow.return_date
                       ? 'bg-green-100 text-green-700'
                       : 'bg-purple-100 text-purple-700'
-                  ${'}'}`}
+                  }`}
                 >
                   {borrow.return_date ? '✅ คืนแล้ว' : '🔄 กำลังยืม'}
                 </span>
@@ -1434,6 +1433,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       </div>
     </div>
   );
+
 
   const ProfileModal = () => {
     const [editMode, setEditMode] = useState(false);
@@ -2004,8 +2004,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       {showDepartmentModal && <DepartmentModal />}
       {showCategoryModal && <CategoryModal />}
       {showAddRepairModal && <AddRepairModal />}
-      {showBorrowModal && <BorrowModal />}
-      {showBorrowHistoryModal && <BorrowHistoryModal />}
       {showRepairHistoryModal && <RepairHistoryModal />}
       {showInkTransactionModal && <InkTransactionModal />}
       {showProfileModal && <ProfileModal />}
