@@ -176,7 +176,10 @@ const App = () => {
   const [showAddRepairModal, setShowAddRepairModal] = useState<boolean>(false);
   const [showInkTransactionModal, setShowInkTransactionModal] = useState<boolean>(false);
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
+  const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
+  const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
@@ -197,6 +200,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
     name: 'Admin',
     email: 'admin@company.com',
     role: 'ผู้ดูแลระบบ',
+    avatar: '👤',
     department: 'IT Department'
   };
 
@@ -1459,10 +1463,13 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   {btn.label}
                 </button>
               ))}
+              <button className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110">⚙️</button>
+              
+              {/* User Menu */}
               <div className="relative">
-                <button onClick={() => setShowUserMenu(!false)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-xl transition-all">
+                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-xl transition-all">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-lg">
-                    "👤"
+                    {currentUser.avatar}
                   </div>
                   <div className="text-left hidden lg:block">
                     <p className="text-sm font-bold text-gray-900">{currentUser.name}</p>
@@ -1470,11 +1477,11 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   </div>
                 </button>
                 
-                {false && (
+                {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 z-50 animate-slideUp">
                     <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200">
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg">
-                        "👤"
+                        {currentUser.avatar}
                       </div>
                       <div>
                         <p className="font-bold text-lg text-gray-900">{currentUser.name}</p>
@@ -1770,6 +1777,8 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       {showAddRepairModal && <AddRepairModal />}
       {showRepairHistoryModal && <RepairHistoryModal />}
       {showInkTransactionModal && <InkTransactionModal />}
+      {showProfileModal && <ProfileModal />}
+      {showSettingsModal && <SettingsModal />}
       {showAddTransactionModal && <AddTransactionModal />}
       {showInkBudgetModal && <InkBudgetModal />}
     </div>
