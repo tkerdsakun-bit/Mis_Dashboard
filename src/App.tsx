@@ -1216,15 +1216,297 @@ const currentUser = propUser || {
 
 
   const ProfileModal = () => {
-    const [editMode, setEditMode] = useState(false);
-    const [profileData, setProfileData] = useState({
-      name: currentUser.name,
-      email: currentUser.email,
-      phone: '099-999-9999',
-      position: 'IT Administrator',
-      department: currentUser.department,
-      bio: 'ผู้ดูแลระบบจัดการทรัพย์สินไอที'
-    });
+  const [editMode, setEditMode] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: currentUser.name,
+    email: currentUser.email,
+    phone: currentUser.phone || '099-999-9999',
+    position: currentUser.position || 'IT Administrator',
+    department: currentUser.department,
+    bio: currentUser.bio || 'ผู้ดูแลระบบจัดการทรัพย์สินไอที',
+    avatar: currentUser.avatar || ''
+  });
+
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: profileData.name,
+          phone: profileData.phone,
+          position: profileData.position,
+          department: profileData.department,
+          bio: profileData.bio,
+          avatar: profileData.avatar
+        })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+
+      setCurrentUser({ ...currentUser, ...profileData });
+      setEditMode(false);
+      alert('✅ บันทึกข้อมูลสำเร็จ!');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // ตรวจสอบขนาดไฟล์ (ไม่เกิน 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('❌ ไฟล์ใหญ่เกินไป (ต้องไม่เกิน 2MB)');
+      return;
+    }
+
+    // ตรวจสอบประเภทไฟล์
+    if (!file.type.startsWith('image/')) {
+      alert('❌ กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const uploadedUrl = await uploadImage(file);
+      if (uploadedUrl) {
+        setProfileData({ ...profileData, avatar: uploadedUrl });
+        alert('✅ อัพโหลดรูปภาพสำเร็จ!');
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      alert('❌ อัพโหลดรูปภาพไม่สำเร็จ');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
+              👤 โปรไฟล์ของฉัน
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">จัดการข้อมูลส่วนตัวของคุณ</p>
+          </div>
+          <button
+            onClick={() => setShowProfileModal(false)}
+            className="text-gray-400 hover:text-gray-600 transition-all text-3xl hover:rotate-90 duration-300"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Avatar Section with Upload */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative group">
+            <img
+              src={profileData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profileData.name)}`}
+              alt="Profile Avatar"
+              className="w-32 h-32 rounded-full border-4 border-purple-300 shadow-2xl object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
+              }}
+            />
+
+            {/* Upload Button - แสดงเฉพาะตอน editMode */}
+            {editMode && (
+              <label className="absolute bottom-0 right-0 bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-3 rounded-full cursor-pointer hover:from-blue-600 hover:to-cyan-600 transition-all shadow-xl hover:scale-110 active:scale-95">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar}
+                />
+                <span className="text-xl">{uploadingAvatar ? '⏳' : '📷'}</span>
+              </label>
+            )}
+
+            {/* Hover Overlay */}
+            {editMode && !uploadingAvatar && (
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-full transition-all flex items-center justify-center pointer-events-none">
+                <p className="text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                  คลิกเพื่อเปลี่ยน
+                </p>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-4 text-sm text-gray-600 text-center font-medium">
+            {profileData.name}
+          </p>
+          <span className="inline-block px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-bold mt-2">
+            {currentUser.role}
+          </span>
+
+          {editMode && (
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              📷 คลิกที่ไอคอนกล้องเพื่ออัพโหลดรูปจาก PC<br />
+              รองรับ: JPG, PNG, WEBP (สูงสุด 2MB)
+            </p>
+          )}
+        </div>
+
+        {/* Profile Form */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* ชื่อ-นามสกุล */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">👤</span>
+              ชื่อ-นามสกุล
+            </label>
+            <input
+              type="text"
+              disabled={!editMode}
+              value={profileData.name}
+              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600"
+              placeholder="ผู้ดูแลระบบ"
+            />
+          </div>
+
+          {/* อีเมล */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">📧</span>
+              อีเมล
+            </label>
+            <input
+              type="email"
+              disabled={true}
+              value={profileData.email}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+              placeholder="admin@company.com"
+            />
+          </div>
+
+          {/* เบอร์โทรศัพท์ */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">📱</span>
+              เบอร์โทรศัพท์
+            </label>
+            <input
+              type="tel"
+              disabled={!editMode}
+              value={profileData.phone}
+              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600"
+              placeholder="099-999-9999"
+            />
+          </div>
+
+          {/* ตำแหน่ง */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">💼</span>
+              ตำแหน่ง
+            </label>
+            <input
+              type="text"
+              disabled={!editMode}
+              value={profileData.position}
+              onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600"
+              placeholder="IT Administrator"
+            />
+          </div>
+
+          {/* แผนก */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">🏢</span>
+              แผนก
+            </label>
+            <select
+              disabled={!editMode}
+              value={profileData.department}
+              onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600"
+            >
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.name}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* เกี่ยวกับฉัน */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span className="text-lg">📝</span>
+              เกี่ยวกับฉัน
+            </label>
+            <textarea
+              disabled={!editMode}
+              value={profileData.bio}
+              onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+              rows={4}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-600 resize-none"
+              placeholder="เขียนอะไรสักหน่อยเกี่ยวกับตัวคุณ..."
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4 justify-end pt-6 border-t-2 border-gray-100">
+          {!editMode ? (
+            <>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all"
+              >
+                ปิด
+              </button>
+              <button
+                onClick={() => setEditMode(true)}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                ✏️ แก้ไข
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  setEditMode(false);
+                  setProfileData({
+                    name: currentUser.name,
+                    email: currentUser.email,
+                    phone: currentUser.phone || '099-999-9999',
+                    position: currentUser.position || 'IT Administrator',
+                    department: currentUser.department,
+                    bio: currentUser.bio || 'ผู้ดูแลระบบจัดการทรัพย์สินไอที',
+                    avatar: currentUser.avatar || ''
+                  });
+                }}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all"
+              >
+                ❌ ยกเลิก
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                ✅ บันทึก
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
