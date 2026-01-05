@@ -425,9 +425,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
     return matchSearch && matchCategory && matchStatus;
   });
 
-  const generateBarcode = (code: string): string => {
-    return `|||  | || ||| || |  ||| | ||  ${code}`;
-  };
 
   const exportToExcel = (): void => {
     const csvContent = [
@@ -468,180 +465,373 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 
   // Modal Components
   const AddAssetModal = () => {
-    const [formData, setFormData] = useState({
-      name: '', tag: '', serial: '', category: assetCategories[0]?.name || '', location: departments[0]?.name || '',
-      price: '', purchase_date: '', warranty_expiry: '', icon: assetCategories[0]?.icon || '📦', status: 'ใช้งาน', warranty_days: 365, image_url: ''
-    });
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string>('');
+  const [formData, setFormData] = useState({
+    name: '',
+    tag: '',
+    serial: '',
+    category: assetCategories[0]?.name || '',
+    location: departments[0]?.name || '',
+    price: '',
+    purchase_date: '',
+    warranty_expiry: '',
+    icon: assetCategories[0]?.icon || '📦',
+    status: 'ใช้งาน',
+    warranty_days: 365,
+    image_url: '',
+    assigned_user: '' // ✅ เพิ่มฟิลด์ชื่อผู้ใช้งาน
+  });
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        setImageFile(file);
-        const reader = new FileReader();
-        reader.onloadend = () => setImagePreview(reader.result as string);
-        reader.readAsDataURL(file);
-      }
-    };
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      let imageUrl = formData.image_url;
-      if (imageFile) {
-        const uploadedUrl = await uploadImage(imageFile);
-        if (uploadedUrl) imageUrl = uploadedUrl;
-      }
-      addAsset({ ...formData, image_url: imageUrl });
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">เพิ่มทรัพย์สินใหม่</h2>
-              <p className="text-gray-500 text-sm mt-1">กรอกข้อมูลทรัพย์สินที่ต้องการเพิ่ม</p>
-            </div>
-            <button onClick={() => setShowAddAssetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-5">
-              <div className="col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">📷 รูปภาพ</label>
-                <input type="file" accept="image/*" onChange={handleImageChange} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300" />
-                {imagePreview && <img src={imagePreview} alt="Preview" className="mt-3 h-40 w-full object-cover rounded-xl shadow-lg" />}
-                {uploading && <p className="text-blue-600 mt-2 animate-pulse">⏳ กำลังอัพโหลด...</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
-                <input type="text" required value={formData.tag} onChange={(e) => setFormData({...formData, tag: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">หมายเลขซีเรียล *</label>
-                <input type="text" required value={formData.serial} onChange={(e) => setFormData({...formData, serial: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">หมวดหมู่ *</label>
-                <select value={formData.category} onChange={(e) => { const cat = assetCategories.find(c => c.name === e.target.value); setFormData({...formData, category: e.target.value, icon: cat?.icon || '📦'}); }} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                  {assetCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.icon} {cat.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">สถานที่ *</label>
-                <select value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                  {departments.map(dept => <option key={dept.id}>{dept.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">ราคา (บาท) *</label>
-                <input type="text" required value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่ซื้อ *</label>
-                <input type="date" required value={formData.purchase_date} onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">วันหมดประกัน *</label>
-                <input type="date" required value={formData.warranty_expiry} onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-            </div>
-            <div className="flex gap-4 pt-6">
-              <button type="submit" disabled={uploading} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100">
-                {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
-              </button>
-              <button type="button" onClick={() => setShowAddAssetModal(false)} className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all">❌ ยกเลิก</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
-  const EditAssetModal = () => {
-    if (!selectedAsset) return null;
-    const [formData, setFormData] = useState({ name: selectedAsset.name, tag: selectedAsset.tag, serial: selectedAsset.serial, category: selectedAsset.category, location: selectedAsset.location, price: selectedAsset.price, purchase_date: selectedAsset.purchase_date, warranty_expiry: selectedAsset.warranty_expiry, icon: selectedAsset.icon, status: selectedAsset.status, warranty_days: selectedAsset.warranty_days, image_url: selectedAsset.image_url || '' });
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string>(selectedAsset.image_url || '');
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        setImageFile(file);
-        const reader = new FileReader();
-        reader.onloadend = () => setImagePreview(reader.result as string);
-        reader.readAsDataURL(file);
-      }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      let imageUrl = formData.image_url;
-      if (imageFile) {
-        const uploadedUrl = await uploadImage(imageFile);
-        if (uploadedUrl) imageUrl = uploadedUrl;
-      }
-      updateAsset(selectedAsset.id, { ...formData, image_url: imageUrl });
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">แก้ไขทรัพย์สิน</h2>
-              <p className="text-gray-500 text-sm mt-1">อัพเดตข้อมูลทรัพย์สิน</p>
-            </div>
-            <button onClick={() => setShowEditAssetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-5">
-              <div className="col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">📷 รูปภาพ</label>
-                <input type="file" accept="image/*" onChange={handleImageChange} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                {imagePreview && <img src={imagePreview} alt="Preview" className="mt-3 h-40 w-full object-cover rounded-xl shadow-lg" />}
-                {uploading && <p className="text-blue-600 mt-2 animate-pulse">⏳ กำลังอัพโหลด...</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
-                <input type="text" required value={formData.tag} onChange={(e) => setFormData({...formData, tag: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">หมายเลขซีเรียล *</label>
-                <input type="text" required value={formData.serial} onChange={(e) => setFormData({...formData, serial: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">สถานะ *</label>
-                <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                  <option>ใช้งาน</option>
-                  <option>ซ่อม</option>
-                  <option>เก็บคลัง</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">ราคา *</label>
-                <input type="text" required value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-              </div>
-            </div>
-            <div className="flex gap-4 pt-6">
-              <button type="submit" disabled={uploading} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">
-                {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
-              </button>
-              <button type="button" onClick={() => setShowEditAssetModal(false)} className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all">❌ ยกเลิก</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    let imageUrl = formData.image_url;
+    if (imageFile) {
+      const uploadedUrl = await uploadImage(imageFile);
+      if (uploadedUrl) imageUrl = uploadedUrl;
+    }
+    addAsset({ ...formData, image_url: imageUrl });
   };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">เพิ่มทรัพย์สินใหม่</h2>
+            <p className="text-gray-500 text-sm mt-1">กรอกข้อมูลทรัพย์สินที่ต้องการเพิ่ม</p>
+          </div>
+          <button onClick={() => setShowAddAssetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-5">
+            {/* รูปภาพ */}
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📷 รูปภาพ</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-blue-300" 
+              />
+              {imagePreview && <img src={imagePreview} alt="Preview" className="mt-3 h-40 w-full object-cover rounded-xl shadow-lg" />}
+              {uploading && <p className="text-blue-600 mt-2 animate-pulse">⏳ กำลังอัพโหลด...</p>}
+            </div>
+
+            {/* ชื่อทรัพย์สิน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* รหัสทรัพย์สิน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.tag} 
+                onChange={(e) => setFormData({...formData, tag: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* หมายเลขซีเรียล */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">หมายเลขซีเรียล *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.serial} 
+                onChange={(e) => setFormData({...formData, serial: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* หมวดหมู่ */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">หมวดหมู่ *</label>
+              <select 
+                value={formData.category} 
+                onChange={(e) => { 
+                  const cat = assetCategories.find(c => c.name === e.target.value); 
+                  setFormData({...formData, category: e.target.value, icon: cat?.icon || '📦'}); 
+                }} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                {assetCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.icon} {cat.name}</option>)}
+              </select>
+            </div>
+
+            {/* สถานที่ */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">สถานที่ *</label>
+              <select 
+                value={formData.location} 
+                onChange={(e) => setFormData({...formData, location: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                {departments.map(dept => <option key={dept.id}>{dept.name}</option>)}
+              </select>
+            </div>
+
+            {/* ✅ ชื่อผู้ใช้งาน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อผู้ใช้งาน</label>
+              <input 
+                type="text" 
+                value={formData.assigned_user} 
+                onChange={(e) => setFormData({...formData, assigned_user: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                placeholder="ระบุชื่อผู้ใช้งาน"
+              />
+            </div>
+
+            {/* ราคา */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ราคา (บาท) *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.price} 
+                onChange={(e) => setFormData({...formData, price: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* วันที่ซื้อ */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่ซื้อ *</label>
+              <input 
+                type="date" 
+                required 
+                value={formData.purchase_date} 
+                onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* วันหมดประกัน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">วันหมดประกัน *</label>
+              <input 
+                type="date" 
+                required 
+                value={formData.warranty_expiry} 
+                onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+          </div>
+
+          {/* ปุ่ม Submit */}
+          <div className="flex gap-4 pt-6">
+            <button 
+              type="submit" 
+              disabled={uploading} 
+              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
+            >
+              {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setShowAddAssetModal(false)} 
+              className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+            >
+              ❌ ยกเลิก
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+
+// ==================== EDIT ASSET MODAL ====================
+const EditAssetModal = () => {
+  if (!selectedAsset) return null;
+
+  const [formData, setFormData] = useState({
+    name: selectedAsset.name,
+    tag: selectedAsset.tag,
+    serial: selectedAsset.serial,
+    category: selectedAsset.category,
+    location: selectedAsset.location,
+    price: selectedAsset.price,
+    purchase_date: selectedAsset.purchase_date,
+    warranty_expiry: selectedAsset.warranty_expiry,
+    icon: selectedAsset.icon,
+    status: selectedAsset.status,
+    warranty_days: selectedAsset.warranty_days,
+    image_url: selectedAsset.image_url || '',
+    assigned_user: selectedAsset.assigned_user || '' // ✅ เพิ่มฟิลด์ชื่อผู้ใช้งาน
+  });
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(selectedAsset.image_url || '');
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    let imageUrl = formData.image_url;
+    if (imageFile) {
+      const uploadedUrl = await uploadImage(imageFile);
+      if (uploadedUrl) imageUrl = uploadedUrl;
+    }
+    updateAsset(selectedAsset.id, { ...formData, image_url: imageUrl });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">แก้ไขทรัพย์สิน</h2>
+            <p className="text-gray-500 text-sm mt-1">อัพเดตข้อมูลทรัพย์สิน</p>
+          </div>
+          <button onClick={() => setShowEditAssetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-5">
+            {/* รูปภาพ */}
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📷 รูปภาพ</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+              {imagePreview && <img src={imagePreview} alt="Preview" className="mt-3 h-40 w-full object-cover rounded-xl shadow-lg" />}
+              {uploading && <p className="text-blue-600 mt-2 animate-pulse">⏳ กำลังอัพโหลด...</p>}
+            </div>
+
+            {/* ชื่อทรัพย์สิน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* รหัสทรัพย์สิน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.tag} 
+                onChange={(e) => setFormData({...formData, tag: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* หมายเลขซีเรียล */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">หมายเลขซีเรียล *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.serial} 
+                onChange={(e) => setFormData({...formData, serial: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+
+            {/* สถานะ */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">สถานะ *</label>
+              <select 
+                value={formData.status} 
+                onChange={(e) => setFormData({...formData, status: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option>ใช้งาน</option>
+                <option>ซ่อม</option>
+                <option>เก็บคลัง</option>
+              </select>
+            </div>
+
+            {/* ✅ ชื่อผู้ใช้งาน */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อผู้ใช้งาน</label>
+              <input 
+                type="text" 
+                value={formData.assigned_user} 
+                onChange={(e) => setFormData({...formData, assigned_user: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+                placeholder="ระบุชื่อผู้ใช้งาน"
+              />
+            </div>
+
+            {/* ราคา */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ราคา *</label>
+              <input 
+                type="text" 
+                required 
+                value={formData.price} 
+                onChange={(e) => setFormData({...formData, price: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+          </div>
+
+          {/* ปุ่ม Submit */}
+          <div className="flex gap-4 pt-6">
+            <button 
+              type="submit" 
+              disabled={uploading} 
+              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+            >
+              {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setShowEditAssetModal(false)} 
+              className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+            >
+              ❌ ยกเลิก
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
   const AssetDetailModal = () => {
     const assetRepairs = repairHistory.filter(r => r.asset_id === selectedAsset?.id);
@@ -667,8 +857,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                     <p className="text-gray-600 text-lg">รหัส: {selectedAsset.tag}</p>
                   </div>
                 </div>
-                <div className="bg-white p-5 rounded-xl font-mono text-center text-base mb-3 shadow-inner">{generateBarcode(selectedAsset.tag)}</div>
-                <p className="text-center text-sm text-gray-600 font-semibold">{selectedAsset.tag}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[
