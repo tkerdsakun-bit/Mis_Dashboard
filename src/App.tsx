@@ -1296,7 +1296,7 @@ const currentUser = propUser || {
         </div>
       </div>
     );
-  };
+  
 
 
   const SettingsModal = () => {
