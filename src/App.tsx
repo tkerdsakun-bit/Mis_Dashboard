@@ -1460,11 +1460,9 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   {btn.label}
                 </button>
               ))}
-              <button className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110">⚙️</button>
-              
-              {/* User Menu Removed */}
-        </div>
-      </div>  </div>
+
+            </div>
+          </div>
 
       {/* Navigation */}
       <div className="bg-white/60 backdrop-blur-xl border-b border-gray-200 shadow-md sticky top-20 z-30">
@@ -1723,6 +1721,8 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       {showAddRepairModal && <AddRepairModal />}
       {showRepairHistoryModal && <RepairHistoryModal />}
       {showInkTransactionModal && <InkTransactionModal />}
+      {showProfileModal && <ProfileModal />}
+      {showSettingsModal && <SettingsModal />}
       {showAddTransactionModal && <AddTransactionModal />}
       {showInkBudgetModal && <InkBudgetModal />}
     </div>
