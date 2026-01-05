@@ -168,7 +168,7 @@ interface AppProps {
   currentUser?: User;
   onLogout?: () => void;
 }
-const App = ({ currentUser: propUser, onLogout }: AppProps) => {
+const App = ({ currentUser: propUser, onLogout: _onLogout }: AppProps) => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [showAddAssetModal, setShowAddAssetModal] = useState<boolean>(false);
   const [showEditAssetModal, setShowEditAssetModal] = useState<boolean>(false);
@@ -1262,36 +1262,37 @@ const currentUser = propUser || {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
-                <input type="text" disabled={!editMode} value={profileData.name} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
-                <input type="email" disabled={!editMode} value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
-                <input type="tel" disabled={!editMode} value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
-                <input type="text" disabled={!editMode} value={profileData.position} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อ-นามสกุล</label>
+    <input type="text" disabled={!editMode} value={profileData.name || ''} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-2">📧 อีเมล</label>
+    <input type="email" disabled={!editMode} value={profileData.email || ''} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-2">📱 เบอร์โทรศัพท์</label>
+    <input type="tel" disabled={!editMode} value={profileData.phone || ''} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-2">💼 ตำแหน่ง</label>
+    <input type="text" disabled={!editMode} value={profileData.position || ''} onChange={(e) => setProfileData({...profileData, position: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+  </div>
+</div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 แผนก</label>
-              <select disabled={!editMode} value={profileData.department} onChange={(e) => setProfileData({...profileData, department: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed">
-                {departments.map(dept => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
-              </select>
-            </div>
+<div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">🏢 แผนก</label>
+  <select disabled={!editMode} value={profileData.department || ''} onChange={(e) => setProfileData({...profileData, department: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed">
+    {departments.map(dept => (<option key={dept.id} value={dept.name}>{dept.name}</option>))}
+  </select>
+</div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">📝 เกี่ยวกับฉัน</label>
-              <textarea rows={3} disabled={!editMode} value={profileData.bio} onChange={(e) => setProfileData({...profileData, bio: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
-            </div>
+<div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">📝 เกี่ยวกับฉัน</label>
+  <textarea rows={3} disabled={!editMode} value={profileData.bio || ''} onChange={(e) => setProfileData({...profileData, bio: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed" />
+</div>
+
 
             {editMode && (
               <div className="flex gap-4 pt-4">
