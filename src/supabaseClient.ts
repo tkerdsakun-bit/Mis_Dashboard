@@ -86,18 +86,4 @@ export interface InkTransaction {
   created_at?: string;
 }
 
-// NEW TYPE for Borrowing System
-export interface BorrowRecord {
-  id: number;
-  asset_id: number;
-  asset_code: string;
-  asset_name: string;
-  borrower_name: string;
-  borrower_contact?: string;
-  purpose: string;
-  borrow_date: string;
-  expected_return_date?: string;
-  return_date?: string;
-  notes?: string;
-  created_at?: string;
-}
+
