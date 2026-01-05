@@ -656,6 +656,10 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
           {selectedAsset && (
             <div className="space-y-6">
               {selectedAsset.image_url && <img src={selectedAsset.image_url} alt={selectedAsset.name} className="w-full h-72 object-cover rounded-2xl shadow-xl" />}
+
+              {/* เพิ่ม QR Code Component ตรงนี้ 👇 */}
+              <AssetQRCode asset={selectedAsset} />
+
               <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-100">
                 <div className="flex items-center gap-5 mb-5">
                   <span className="text-6xl">{selectedAsset.icon}</span>
