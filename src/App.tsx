@@ -1889,7 +1889,7 @@ const EditAssetModal = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600 font-medium">ผู้ใช้:</span>
-                        <span className="font-bold text-green-600 text-lg">฿{asset.assigned_user}</span>
+                        <span className="font-bold text-green-600 text-lg">{asset.assigned_user}</span>
                       </div>
                     </div>
                   </div>
