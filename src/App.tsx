@@ -1460,9 +1460,12 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                   {btn.label}
                 </button>
               ))}
-
-            </div>
-          </div>
+              
+                        </div>
+        </div>
+      </div> </div>
+        </div>
+      </div>
 
       {/* Navigation */}
       <div className="bg-white/60 backdrop-blur-xl border-b border-gray-200 shadow-md sticky top-20 z-30">
