@@ -168,7 +168,7 @@ interface AppProps {
   currentUser?: User;
   onLogout?: () => void;
 }
-const App = ({ currentUser: propUser, onLogout: _onLogout }: AppProps) => {
+const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [showAddAssetModal, setShowAddAssetModal] = useState<boolean>(false);
   const [showEditAssetModal, setShowEditAssetModal] = useState<boolean>(false);
@@ -1501,27 +1501,56 @@ const currentUser = propUser || {
                         </span>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                        <span className="text-2xl">🏢</span>
-                        <div>
-                          <p className="text-xs text-gray-600">แผนก</p>
-                          <p className="font-semibold text-gray-900">{currentUser.department}</p>
-                        </div>
-                                              </div>
-                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
-                        <span className="text-xl">👤</span>
-                        <span className="font-medium text-gray-700">โปรไฟล์</span>
-                      </button>
-                      <button className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3">
-                        <span className="text-xl">⚙️</span>
-                        <span className="font-medium text-gray-700">ตั้งค่า</span>
-                      </button>
-                      <button className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600">
-                        <span className="text-xl">🚪</span>
-                        <span className="font-medium">ออกจากระบบ</span>
-                      </button>
-                    </div>
+<div className="space-y-2">
+  <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+    <span className="text-2xl">🏢</span>
+    <div>
+      <p className="text-xs text-gray-600">แผนก</p>
+      <p className="font-semibold text-gray-900">{currentUser.department}</p>
+    </div>
+  </div>
+  
+  {/* ปุ่มโปรไฟล์ */}
+  <button 
+    onClick={() => {
+      setShowProfileModal(true);
+      setShowUserMenu(false);
+    }}
+    className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3"
+  >
+    <span className="text-xl">👤</span>
+    <span className="font-medium text-gray-700">โปรไฟล์</span>
+  </button>
+  
+  {/* ปุ่มตั้งค่า */}
+  <button 
+    onClick={() => {
+      setShowSettingsModal(true);
+      setShowUserMenu(false);
+    }}
+    className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-xl transition-all flex items-center gap-3"
+  >
+    <span className="text-xl">⚙️</span>
+    <span className="font-medium text-gray-700">ตั้งค่า</span>
+  </button>
+  
+  {/* ปุ่มออกจากระบบ */}
+  <button 
+    onClick={() => {
+      if (onLogout) {
+        onLogout();
+      } else {
+        alert('⚠️ กรุณาใช้งานผ่านระบบ Login');
+      }
+      setShowUserMenu(false);
+    }}
+    className="w-full px-4 py-3 text-left hover:bg-red-50 rounded-xl transition-all flex items-center gap-3 text-red-600"
+  >
+    <span className="text-xl">🚪</span>
+    <span className="font-medium">ออกจากระบบ</span>
+  </button>
+</div>
+
                   </div>
                 )}
               </div>
