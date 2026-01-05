@@ -38,7 +38,7 @@ export const handleAvatarUpload = async (
     const filePath = `avatars/${fileName}`;
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('assets')
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -201,40 +201,6 @@ export const validateImageFile = (file: File): { valid: boolean; error?: string 
 };
 
 // ==========================================
-// 5. Theme Hook (for React Components)
-// ==========================================
-
-export const useTheme = () => {
-  const [theme, setThemeState] = React.useState<'light' | 'dark'>('light');
-
-  React.useEffect(() => {
-    const settings = loadSettings();
-    if (settings) {
-      setThemeState(settings.theme);
-      applyTheme(settings.theme);
-    }
-  }, []);
-
-  const setTheme = (newTheme: 'light' | 'dark') => {
-    setThemeState(newTheme);
-    applyTheme(newTheme);
-
-    const settings = loadSettings() || {
-      theme: 'light',
-      language: 'th',
-      notifications: true,
-      emailNotif: true,
-      autoBackup: false,
-      itemsPerPage: '20'
-    };
-
-    saveSettings({ ...settings, theme: newTheme }, 0);
-  };
-
-  return { theme, setTheme };
-};
-
-// ==========================================
 // Export ทั้งหมด
 // ==========================================
 
@@ -244,6 +210,5 @@ export default {
   loadSettings,
   applyTheme,
   updateProfile,
-  validateImageFile,
-  useTheme
+  validateImageFile
 };

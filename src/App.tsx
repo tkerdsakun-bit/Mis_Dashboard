@@ -201,14 +201,12 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       alert('❌ รองรับเฉพาะไฟล์ JPG, PNG, WEBP เท่านั้น');
       return;
     }
 
-    // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
       alert('❌ ขนาดไฟล์ต้องไม่เกิน 2MB');
       return;
@@ -217,13 +215,12 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
     setUploading(true);
 
     try {
-      // Create unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `avatar-${currentUser.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload to Supabase (ลบ uploadData ออก)
+      const { error: uploadError } = await supabase.storage
         .from('assets')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -232,14 +229,12 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('assets')
         .getPublicUrl(filePath);
 
       const avatarUrl = urlData.publicUrl;
 
-      // Update user avatar in database
       const { error: updateError } = await supabase
         .from('users')
         .update({ avatar: avatarUrl, updated_at: new Date().toISOString() })
@@ -248,8 +243,6 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
       if (updateError) throw updateError;
 
       alert('✅ อัพเดตรูปโปรไฟล์สำเร็จ!');
-      
-      // Reload page to show new avatar
       window.location.reload();
 
     } catch (error: any) {
@@ -263,18 +256,12 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   // Save Settings Handler
   const handleSaveSettings = async (settings: any) => {
     try {
-      // Save to localStorage
       localStorage.setItem('app_settings', JSON.stringify(settings));
-      
-      // Apply theme
       setTheme(settings.theme);
       document.documentElement.classList.toggle('dark', settings.theme === 'dark');
-      
-      // Update other settings
       setAutoBackup(settings.autoBackup);
       setEmailNotif(settings.emailNotif);
       
-      // Optionally save to database
       const { error } = await supabase
         .from('user_settings')
         .upsert({
@@ -284,7 +271,6 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
         });
       
       if (error) console.warn('Settings save warning:', error);
-      
       alert('✅ บันทึกการตั้งค่าสำเร็จ!');
       return true;
     } catch (error: any) {
@@ -1452,142 +1438,47 @@ const currentUser = propUser || {
         <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-                ⚙️ การตั้งค่า
-              </h2>
-              <p className="text-gray-500 text-sm mt-1">ปรับแต่งการใช้งานตามที่คุณต้องการ</p>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">⚙️ การตั้งค่า</h2>
+              <p className="text-gray-500 text-sm mt-1">ปรับแต่งการใช้งาน</p>
             </div>
-            <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">×</button>
+            <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl">×</button>
           </div>
 
           <div className="space-y-6">
-            {/* Theme Setting */}
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-                    🎨 ธีม (Theme)
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">เลือกธีมที่คุณชอบ</p>
-                </div>
-                <select 
-                  value={settings.theme} 
-                  onChange={(e) => setSettings({...settings, theme: e.target.value as 'light' | 'dark'})}
-                  className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                >
-                  <option value="light">☀️ สว่าง (Light)</option>
-                  <option value="dark">🌙 มืด (Dark)</option>
-                </select>
-              </div>
+              <h3 className="font-bold text-lg mb-4">🎨 ธีม</h3>
+              <select value={settings.theme} onChange={(e) => setSettings({...settings, theme: e.target.value as 'light' | 'dark'})} className="w-full px-4 py-2 border-2 rounded-xl">
+                <option value="light">☀️ สว่าง</option>
+                <option value="dark">🌙 มืด</option>
+              </select>
             </div>
 
-            {/* Language Setting */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-                    🌐 ภาษา (Language)
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">เลือกภาษาที่ใช้งาน</p>
-                </div>
-                <select 
-                  value={settings.language} 
-                  onChange={(e) => setSettings({...settings, language: e.target.value})}
-                  className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white"
-                >
-                  <option value="th">🇹🇭 ไทย</option>
-                  <option value="en">🇬🇧 English</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Notifications */}
             <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-                    🔔 การแจ้งเตือน
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">จัดการการแจ้งเตือนต่างๆ</p>
-                </div>
-              </div>
-
+              <h3 className="font-bold text-lg mb-4">🔔 การแจ้งเตือน</h3>
               <div className="space-y-3">
-                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:bg-gray-50 transition-all cursor-pointer">
-                  <span className="text-gray-700">แจ้งเตือนทั่วไป</span>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications}
-                    onChange={(e) => setSettings({...settings, notifications: e.target.checked})}
-                    className="w-5 h-5 text-yellow-500 rounded focus:ring-2 focus:ring-yellow-500"
-                  />
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl cursor-pointer">
+                  <span>แจ้งเตือนทั่วไป</span>
+                  <input type="checkbox" checked={settings.notifications} onChange={(e) => setSettings({...settings, notifications: e.target.checked})} className="w-5 h-5" />
                 </label>
-
-                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:bg-gray-50 transition-all cursor-pointer">
-                  <span className="text-gray-700">📧 แจ้งเตือนทางอีเมล</span>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.emailNotif}
-                    onChange={(e) => setSettings({...settings, emailNotif: e.target.checked})}
-                    className="w-5 h-5 text-yellow-500 rounded focus:ring-2 focus:ring-yellow-500"
-                  />
+                <label className="flex items-center justify-between p-3 bg-white rounded-xl cursor-pointer">
+                  <span>📧 อีเมล</span>
+                  <input type="checkbox" checked={settings.emailNotif} onChange={(e) => setSettings({...settings, emailNotif: e.target.checked})} className="w-5 h-5" />
                 </label>
               </div>
             </div>
 
-            {/* System Settings */}
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-                    💾 ระบบ
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">ตั้งค่าระบบ</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center justify-between p-3 bg-white rounded-xl hover:bg-gray-50 transition-all cursor-pointer">
-                  <span className="text-gray-700">🔄 สำรองข้อมูลอัตโนมัติ</span>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.autoBackup}
-                    onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})}
-                    className="w-5 h-5 text-purple-500 rounded focus:ring-2 focus:ring-purple-500"
-                  />
-                </label>
-
-                <div className="flex items-center justify-between p-3 bg-white rounded-xl">
-                  <span className="text-gray-700">📊 แสดงรายการต่อหน้า</span>
-                  <select 
-                    value={settings.itemsPerPage} 
-                    onChange={(e) => setSettings({...settings, itemsPerPage: e.target.value})}
-                    className="px-3 py-1 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                  >
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                </div>
-              </div>
+              <h3 className="font-bold text-lg mb-4">💾 ระบบ</h3>
+              <label className="flex items-center justify-between p-3 bg-white rounded-xl cursor-pointer">
+                <span>🔄 สำรองข้อมูลอัตโนมัติ</span>
+                <input type="checkbox" checked={settings.autoBackup} onChange={(e) => setSettings({...settings, autoBackup: e.target.checked})} className="w-5 h-5" />
+              </label>
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-4 mt-8">
-            <button 
-              onClick={() => setShowSettingsModal(false)} 
-              className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-            >
-              ยกเลิก
-            </button>
-            <button 
-              onClick={handleSave}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
-            >
-              💾 บันทึกการตั้งค่า
-            </button>
+            <button onClick={() => setShowSettingsModal(false)} className="flex-1 bg-gray-200 py-4 rounded-xl font-semibold">ยกเลิก</button>
+            <button onClick={handleSave} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold">💾 บันทึก</button>
           </div>
         </div>
       </div>
