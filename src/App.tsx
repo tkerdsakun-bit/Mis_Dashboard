@@ -867,8 +867,8 @@ const EditAssetModal = () => {
                   { label: 'วันที่ซื้อ', value: selectedAsset.purchase_date },
                   { label: 'หมดประกัน', value: selectedAsset.warranty_expiry },
                   { label: 'ราคา', value: `฿${selectedAsset.price}`, color: 'text-green-600' },
-                  { label: 'การรับประกันคงเหลือ', value: `${selectedAsset.warranty_days} วัน`, color: selectedAsset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600' }
-                  { label: 'ผู้ใช้งาน', value: selectedAsset.assigned_user },
+                  { label: 'การรับประกันคงเหลือ', value: `${selectedAsset.warranty_days} วัน`, color: selectedAsset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600' },
+                  { label: 'ผู้ใช้งาน', value: selectedAsset.assigned_user }
                 ].map((item, idx) => (
                   <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
                     <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
