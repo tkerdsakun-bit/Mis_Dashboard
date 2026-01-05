@@ -9,6 +9,7 @@ const AssetDetail = () => {
   const [asset, setAsset] = useState<Asset | null>(null);
   const [repairs, setRepairs] = useState<RepairHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchAssetData();
@@ -17,6 +18,7 @@ const AssetDetail = () => {
   const fetchAssetData = async () => {
     try {
       setLoading(true);
+      setError(false);
 
       // Fetch asset
       const { data: assetData, error: assetError } = await supabase
@@ -25,7 +27,13 @@ const AssetDetail = () => {
         .eq('id', assetId)
         .single();
 
-      if (assetError) throw assetError;
+      if (assetError) {
+        console.error('Asset fetch error:', assetError);
+        setError(true);
+        setLoading(false);
+        return;
+      }
+
       setAsset(assetData as Asset);
 
       // Fetch repair history
@@ -35,11 +43,15 @@ const AssetDetail = () => {
         .eq('assetid', assetId)
         .order('createdat', { ascending: false });
 
-      if (repairError) throw repairError;
-      setRepairs(repairData as RepairHistory[]);
+      if (repairError) {
+        console.error('Repair history fetch error:', repairError);
+        // ไม่ต้อง return เพราะ asset data ได้แล้ว
+      } else {
+        setRepairs(repairData as RepairHistory[]);
+      }
     } catch (error) {
       console.error('Error fetching asset:', error);
-      alert('ไม่พบข้อมูลทรัพย์สิน');
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -56,12 +68,13 @@ const AssetDetail = () => {
     );
   }
 
-  if (!asset) {
+  if (error || !asset) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-8xl mb-6">❌</div>
           <p className="text-2xl font-bold text-gray-700 mb-4">ไม่พบข้อมูลทรัพย์สิน</p>
+          <p className="text-gray-500 mb-6">รหัสทรัพย์สินไม่ถูกต้องหรือถูกลบไปแล้ว</p>
           <button
             onClick={() => navigate('/')}
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
