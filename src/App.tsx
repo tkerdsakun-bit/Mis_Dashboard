@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction, BorrowRecord } from './supabaseClient';
+import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
 import QRCode from 'react-qr-code';
 
 
@@ -180,8 +180,6 @@ const App = () => {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
-  const [showBorrowModal, setShowBorrowModal] = useState<boolean>(false);
-  const [showBorrowHistoryModal, setShowBorrowHistoryModal] = useState<boolean>(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
@@ -196,7 +194,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const [assetCategories, setAssetCategories] = useState<AssetCategory[]>([]);
   const [repairHistory, setRepairHistory] = useState<RepairHistory[]>([]);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
-  const [borrowRecords, setBorrowRecords] = useState<BorrowRecord[]>([]);
 
   // User Info
   const currentUser = {
@@ -267,17 +264,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       if (transactionsError) throw transactionsError;
       if (transactionsData) setInkTransactions(transactionsData as InkTransaction[]);
 
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('เกิดข้อผิดพลาดในการโหลดข้อมูล');
@@ -307,17 +293,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 
       const { data: publicUrlData } = supabase.storage.from('assets-images').getPublicUrl(filePath);
       return publicUrlData.publicUrl;
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('❌ เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ');
@@ -334,17 +309,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       alert('✅ เพิ่มทรัพย์สินสำเร็จ');
       setShowAddAssetModal(false);
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error adding asset:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -359,17 +323,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       setShowEditAssetModal(false);
       setShowDetailModal(false);
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error updating asset:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -384,17 +337,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       alert('✅ ลบสำเร็จ');
       setShowDetailModal(false);
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error deleting asset:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -407,17 +349,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       if (error) throw error;
       alert('✅ เพิ่มแผนก ' + name + ' สำเร็จ');
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error adding department:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -431,17 +362,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       if (error) throw error;
       alert('✅ ลบแผนกสำเร็จ');
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error deleting department:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -454,17 +374,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       if (error) throw error;
       alert('✅ เพิ่มประเภท ' + name + ' สำเร็จ');
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error adding category:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -478,17 +387,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       if (error) throw error;
       alert('✅ ลบประเภทสำเร็จ');
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error deleting category:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -502,17 +400,6 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       alert('✅ เพิ่มประวัติการซ่อมสำเร็จ');
       setShowAddRepairModal(false);
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error adding repair history:', error);
       alert('❌ เกิดข้อผิดพลาด');
@@ -526,60 +413,9 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       alert('✅ เพิ่มรายการสำเร็จ');
       setShowAddTransactionModal(false);
       fetchAllData();
-
-      // Fetch Borrow Records
-      const { data: borrowData, error: borrowError } = await supabase
-        .from('borrow_records')
-        .select('*')
-        .order('borrow_date', { ascending: false });
-      if (borrowError && borrowError.code !== 'PGRST116') {
-        console.log('Borrow records table might not exist yet');
-      }
-      if (borrowData) setBorrowRecords(borrowData as BorrowRecord[]);
-
     } catch (error) {
       console.error('Error adding transaction:', error);
       alert('❌ เกิดข้อผิดพลาด');
-    }
-  };
-
-
-  // Borrow Operations
-  const borrowAsset = async (borrowData: Partial<BorrowRecord>): Promise<void> => {
-    try {
-      const { error } = await supabase.from('borrow_records').insert(borrowData);
-      if (error) throw error;
-
-      // Update asset status
-      await supabase.from('assets').update({ status: 'กำลังยืม' }).eq('id', borrowData.asset_id);
-
-      alert('บันทึกการยืมสำเร็จ!');
-      setShowBorrowModal(false);
-      fetchAllData();
-    } catch (error) {
-      console.error('Error borrowing asset:', error);
-      alert('เกิดข้อผิดพลาดในการยืมทรัพย์สิน');
-    }
-  };
-
-  const returnAsset = async (recordId: number, assetId: number): Promise<void> => {
-    try {
-      const returnDate = new Date().toISOString().split('T')[0];
-
-      const { error } = await supabase
-        .from('borrow_records')
-        .update({ return_date: returnDate })
-        .eq('id', recordId);
-      if (error) throw error;
-
-      // Update asset status back to available
-      await supabase.from('assets').update({ status: 'ใช้งานได้' }).eq('id', assetId);
-
-      alert('คืนทรัพย์สินสำเร็จ!');
-      fetchAllData();
-    } catch (error) {
-      console.error('Error returning asset:', error);
-      alert('เกิดข้อผิดพลาดในการคืนทรัพย์สิน');
     }
   };
 
@@ -832,7 +668,7 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
                     <p className="text-gray-600 text-lg">รหัส: {selectedAsset.tag}</p>
                   </div>
                 </div>
-                
+                <div className="bg-white p-5 rounded-xl font-mono text-center text-base mb-3 shadow-inner">{generateBarcode(selectedAsset.tag)}</div>
                 <p className="text-center text-sm text-gray-600 font-semibold">{selectedAsset.tag}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1369,6 +1205,235 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
 };
 
 
+
+  // Borrow Modal - NEW
+  const BorrowModal = () => {
+    const [formData, setFormData] = useState({
+      asset_id: selectedAsset?.id || 0,
+      asset_code: selectedAsset?.asset_code || selectedAsset?.tag || '',
+      asset_name: selectedAsset?.name || '',
+      borrower_name: '',
+      borrower_contact: '',
+      purpose: '',
+      borrow_date: new Date().toISOString().split('T')[0],
+      expected_return_date: '',
+      notes: ''
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      borrowAsset(formData);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                🔄 ยืมทรัพย์สิน
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">บันทึกข้อมูลผู้ยืม</p>
+            </div>
+            <button
+              onClick={() => setShowBorrowModal(false)}
+              className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
+            >
+              ✕
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-5 rounded-xl border border-blue-100">
+              <p className="text-sm text-gray-600 mb-1">ทรัพย์สิน</p>
+              <p className="font-bold text-xl text-gray-900">{selectedAsset?.name} ({selectedAsset?.asset_code || selectedAsset?.tag})</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อผู้ยืม</label>
+              <input
+                type="text"
+                required
+                value={formData.borrower_name}
+                onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                placeholder="เช่น สมชาย ใจดี"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">เบอร์โทรติดต่อ</label>
+              <input
+                type="text"
+                value={formData.borrower_contact}
+                onChange={(e) => setFormData({ ...formData, borrower_contact: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                placeholder="081-234-5678"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">วัตถุประสงค์การใช้งาน</label>
+              <textarea
+                required
+                rows={3}
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                placeholder="เช่น ใช้ในการประชุม"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่ยืม</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.borrow_date}
+                  onChange={(e) => setFormData({ ...formData, borrow_date: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่คาดว่าจะคืน</label>
+                <input
+                  type="date"
+                  value={formData.expected_return_date}
+                  onChange={(e) => setFormData({ ...formData, expected_return_date: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">หมายเหตุ</label>
+              <textarea
+                rows={2}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+              />
+            </div>
+
+            <div className="flex gap-4 pt-6">
+              <button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+              >
+                💾 บันทึกการยืม
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBorrowModal(false)}
+                className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // Borrow History Modal - NEW
+  const BorrowHistoryModal = () => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              🔄 ประวัติการยืม
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">รายการยืมทรัพย์สินทั้งหมด ({borrowRecords.length})</p>
+          </div>
+          <button
+            onClick={() => setShowBorrowHistoryModal(false)}
+            className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {borrowRecords.map(borrow => (
+            <div
+              key={borrow.id}
+              className={`bg-gradient-to-r ${'${'}
+                borrow.return_date
+                  ? 'from-gray-50 to-gray-100 border-gray-200'
+                  : 'from-purple-50 to-pink-50 border-purple-200'
+              ${'}'} border-2 rounded-2xl p-6 hover:shadow-2xl transition-all`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-xl text-gray-900">{borrow.asset_name}</h3>
+                  <p className="text-sm text-gray-600">รหัส: {borrow.asset_code}</p>
+                </div>
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-bold ${'${'}
+                    borrow.return_date
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-purple-100 text-purple-700'
+                  ${'}'}`}
+                >
+                  {borrow.return_date ? '✅ คืนแล้ว' : '🔄 กำลังยืม'}
+                </span>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl mb-4 border border-purple-100">
+                <p className="text-sm"><strong>👤 ผู้ยืม:</strong> {borrow.borrower_name}</p>
+                {borrow.borrower_contact && <p className="text-sm"><strong>📞 ติดต่อ:</strong> {borrow.borrower_contact}</p>}
+                <p className="text-sm"><strong>📝 วัตถุประสงค์:</strong> {borrow.purpose}</p>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="bg-white p-3 rounded-lg border border-purple-100">
+                  <p className="text-gray-500 mb-1">วันที่ยืม</p>
+                  <p className="font-bold text-gray-900">{borrow.borrow_date}</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-purple-100">
+                  <p className="text-gray-500 mb-1">วันที่คาดว่าจะคืน</p>
+                  <p className="font-bold text-gray-900">{borrow.expected_return_date || '-'}</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-purple-100">
+                  <p className="text-gray-500 mb-1">วันที่คืนจริง</p>
+                  <p className="font-bold text-gray-900">{borrow.return_date || '-'}</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-purple-100">
+                  <p className="text-gray-500 mb-1">การดำเนินการ</p>
+                  {!borrow.return_date && (
+                    <button
+                      onClick={() => returnAsset(borrow.id, borrow.asset_id)}
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-1 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all text-xs"
+                    >
+                      คืนทรัพย์สิน
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {borrow.notes && (
+                <div className="mt-4 pt-4 border-t border-purple-200">
+                  <p className="text-sm text-gray-600"><strong>หมายเหตุ:</strong> {borrow.notes}</p>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {borrowRecords.length === 0 && (
+            <div className="text-center py-20">
+              <span className="text-8xl mb-6 block animate-bounce">📋</span>
+              <p className="text-2xl font-bold text-gray-700 mb-2">ยังไม่มีประวัติการยืม</p>
+              <p className="text-gray-500">เริ่มบันทึกการยืมทรัพย์สินเพื่อติดตามการใช้งาน</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   const ProfileModal = () => {
     const [editMode, setEditMode] = useState(false);
@@ -1939,6 +2004,8 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       {showDepartmentModal && <DepartmentModal />}
       {showCategoryModal && <CategoryModal />}
       {showAddRepairModal && <AddRepairModal />}
+      {showBorrowModal && <BorrowModal />}
+      {showBorrowHistoryModal && <BorrowHistoryModal />}
       {showRepairHistoryModal && <RepairHistoryModal />}
       {showInkTransactionModal && <InkTransactionModal />}
       {showProfileModal && <ProfileModal />}
