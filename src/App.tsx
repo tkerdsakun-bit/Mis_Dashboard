@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
+import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction, User } from './supabaseClient';
 import QRCode from 'react-qr-code';
 
 
@@ -164,7 +164,11 @@ const AssetQRCode = ({ asset }: { asset: Asset }) => {
   );
 };
 
-const App = () => {
+interface AppProps {
+  currentUser?: User;
+  onLogout?: () => void;
+}
+const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [showAddAssetModal, setShowAddAssetModal] = useState<boolean>(false);
   const [showEditAssetModal, setShowEditAssetModal] = useState<boolean>(false);
@@ -196,13 +200,18 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const [inkTransactions, setInkTransactions] = useState<InkTransaction[]>([]);
 
   // User Info
-  const currentUser = {
-    name: 'Admin',
-    email: 'admin@company.com',
-    role: 'ผู้ดูแลระบบ',
-    avatar: '👤',
-    department: 'IT Department'
-  };
+const currentUser = propUser || {
+  id: 0,
+  username: 'admin',
+  password: 'admin123',
+  name: 'Admin',
+  email: 'admin@company.com',
+  role: 'ผู้ดูแลระบบ',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+  department: 'IT Department',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+};
 
   const stats = [
     { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50' },
