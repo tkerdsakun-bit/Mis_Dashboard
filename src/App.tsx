@@ -191,12 +191,7 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
 
-  // Theme & Settings States
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [autoBackup, setAutoBackup] = useState<boolean>(false);
-  const [emailNotif, setEmailNotif] = useState<boolean>(true);
-
-  // Avatar Upload Handler - ใช้ใน ProfileModal
+  // Avatar Upload Handler
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -219,7 +214,6 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
       const fileName = `avatar-${currentUser.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // Upload (ไม่ใช้ uploadData)
       const { error: uploadError } = await supabase.storage
         .from('assets')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
@@ -243,29 +237,6 @@ const App = ({ currentUser: propUser, onLogout }: AppProps) => {
       alert('❌ เกิดข้อผิดพลาด: ' + error.message);
     } finally {
       setUploading(false);
-    }
-  };
-
-  // Settings Handler
-  const handleSaveSettings = async (settings: any) => {
-    try {
-      localStorage.setItem('app_settings', JSON.stringify(settings));
-      setTheme(settings.theme);
-      document.documentElement.classList.toggle('dark', settings.theme === 'dark');
-      setAutoBackup(settings.autoBackup);
-      setEmailNotif(settings.emailNotif);
-      
-      await supabase.from('user_settings').upsert({
-        user_id: currentUser.id,
-        settings: settings,
-        updated_at: new Date().toISOString()
-      });
-      
-      alert('✅ บันทึกการตั้งค่าสำเร็จ!');
-      return true;
-    } catch (error: any) {
-      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
-      return false;
     }
   };
 
