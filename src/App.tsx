@@ -208,7 +208,15 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   const stats = [
     { icon: '📦', label: 'ทรัพย์สินทั้งหมด', value: assets.length.toString(), color: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50' },
     { icon: '⚠️', label: 'การรับประกันใกล้หมด', value: assets.filter((a: Asset) => a.warranty_days < 30).length.toString(), color: 'from-yellow-500 to-orange-500', bgColor: 'bg-yellow-50' },
-    { icon: '🔧', label: 'อยู่ระหว่างซ่อม', value: assets.filter((a: Asset) => a.status === 'ซ่อม').length.toString(), color: 'from-red-500 to-pink-500', bgColor: 'bg-red-50' },
+    { 
+      icon: '🔧', 
+      label: 'อยู่ระหว่างซ่อม', 
+      value: repairHistory.filter((r: RepairHistory) => 
+      r.repair_status === 'กำลังซ่อม'  // ✅ เฉพาะกำลังซ่อม
+    ) .length.toString(), 
+  color: 'from-red-500 to-pink-500', 
+  bgColor: 'bg-red-50' 
+   },
     { icon: '💰', label: 'มูลค่ารวม', value: `฿${(assets.reduce((sum, a: Asset) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0) / 1000000).toFixed(1)}M`, color: 'from-green-500 to-emerald-500', bgColor: 'bg-green-50' },
     { icon: '🏢', label: 'แผนกทั้งหมด', value: departments.length.toString(), color: 'from-purple-500 to-violet-500', bgColor: 'bg-purple-50' },
     { icon: '📂', label: 'ประเภททรัพย์สิน', value: assetCategories.length.toString(), color: 'from-indigo-500 to-blue-500', bgColor: 'bg-indigo-50' }
