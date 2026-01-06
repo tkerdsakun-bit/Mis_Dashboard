@@ -115,6 +115,10 @@ const AssetQRCode = ({ asset }: { asset: Asset }) => {
               <span class="info-label">📦 ประเภท:</span>
               <span class="info-value">${asset.category}</span>
             </div>
+            <div class="info">
+              <span class="info-label">👤 ผู้ใช้งาน:</span>
+              <span class="info-value">${asset.assigned_user || '-'}</span>
+            </div>
             <div class="footer">
               <div class="scan-text">📱 สแกน QR Code เพื่อดูข้อมูลทรัพย์สิน</div>
               <div style="margin-top: 10px; font-size: 12px;">พร้อมประวัติการซ่อมและข้อมูลการรับประกัน</div>
