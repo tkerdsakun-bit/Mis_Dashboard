@@ -104,7 +104,7 @@ const AssetQRCode = ({ asset }: { asset: Asset }) => {
               <img src="${svgBase64}" width="200" height="200" alt="QR Code" />
             </div>
             <div class="info">
-              <span class="info-label">🏷️ Asset Tag:</span>
+              <span class="info-label">🏷️ รหัสทรัพย์สิน:</span>
               <span class="info-value">${asset.tag}</span>
             </div>
             <div class="info">
