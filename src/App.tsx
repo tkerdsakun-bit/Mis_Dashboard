@@ -174,6 +174,8 @@ const App = () => {
   const [showInkBudgetModal, setShowInkBudgetModal] = useState<boolean>(false);
   const [showRepairHistoryModal, setShowRepairHistoryModal] = useState<boolean>(false);
   const [showAddRepairModal, setShowAddRepairModal] = useState<boolean>(false);
+  const [showEditRepairModal, setShowEditRepairModal] = useState<boolean>(false);
+  const [selectedRepair, setSelectedRepair] = useState<RepairHistory | null>(null);
   const [showInkTransactionModal, setShowInkTransactionModal] = useState<boolean>(false);
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
@@ -404,6 +406,305 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
       alert('❌ เกิดข้อผิดพลาด');
     }
   };
+  const updateRepairHistory = async (id: number, repairData: Partial<RepairHistory>): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('repair_history')
+      .update(repairData)
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    alert('✅ แก้ไขประวัติการซ่อมสำเร็จ');
+    setShowEditRepairModal(false);
+    setSelectedRepair(null);
+    fetchAllData();
+  } catch (error) {
+    console.error('Error updating repair history:', error);
+    alert('❌ เกิดข้อผิดพลาด');
+  }
+};
+
+// เพิ่มฟังก์ชันลบประวัติการซ่อม
+const deleteRepairHistory = async (id: number): Promise<void> => {
+  if (!confirm('ต้องการลบประวัติการซ่อมนี้หรือไม่?')) return;
+  try {
+    const { error } = await supabase
+      .from('repair_history')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    alert('✅ ลบประวัติการซ่อมสำเร็จ');
+    setShowEditRepairModal(false);
+    setSelectedRepair(null);
+    fetchAllData();
+  } catch (error) {
+    console.error('Error deleting repair history:', error);
+    alert('❌ เกิดข้อผิดพลาด');
+  }
+};
+
+// Modal สำหรับแก้ไขประวัติการซ่อม
+const EditRepairModal = () => {
+  if (!selectedRepair) return null;
+
+  const [formData, setFormData] = useState({
+    issue_description: selectedRepair.issue_description,
+    repair_status: selectedRepair.repair_status,
+    repair_cost: selectedRepair.repair_cost,
+    start_date: selectedRepair.start_date,
+    end_date: selectedRepair.end_date || '',
+    technician: selectedRepair.technician || '',
+    notes: selectedRepair.notes || ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateRepairHistory(selectedRepair.id, formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              ✏️ แก้ไขประวัติการซ่อม
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">
+              {selectedRepair.asset_name} ({selectedRepair.asset_tag})
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowEditRepairModal(false)} 
+            className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              รายละเอียดปัญหา *
+            </label>
+            <textarea 
+              required 
+              rows={3} 
+              value={formData.issue_description} 
+              onChange={(e) => setFormData({...formData, issue_description: e.target.value})} 
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                สถานะการซ่อม *
+              </label>
+              <select 
+                value={formData.repair_status} 
+                onChange={(e) => setFormData({...formData, repair_status: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              >
+                <option>รอดำเนินการ</option>
+                <option>กำลังซ่อม</option>
+                <option>เสร็จสิ้น</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                ค่าใช้จ่าย (บาท)
+              </label>
+              <input 
+                type="number" 
+                step="0.01" 
+                value={formData.repair_cost} 
+                onChange={(e) => setFormData({...formData, repair_cost: parseFloat(e.target.value)})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                วันที่เริ่มซ่อม *
+              </label>
+              <input 
+                type="date" 
+                required 
+                value={formData.start_date} 
+                onChange={(e) => setFormData({...formData, start_date: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                วันที่เสร็จสิ้น
+              </label>
+              <input 
+                type="date" 
+                value={formData.end_date} 
+                onChange={(e) => setFormData({...formData, end_date: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              ช่างผู้รับผิดชอบ
+            </label>
+            <input 
+              type="text" 
+              value={formData.technician} 
+              onChange={(e) => setFormData({...formData, technician: e.target.value})} 
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              หมายเหตุ
+            </label>
+            <textarea 
+              rows={2} 
+              value={formData.notes} 
+              onChange={(e) => setFormData({...formData, notes: e.target.value})} 
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all" 
+            />
+          </div>
+
+          <div className="flex gap-4 pt-6">
+            <button 
+              type="submit" 
+              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+            >
+              ✅ บันทึกการแก้ไข
+            </button>
+            <button 
+              type="button" 
+              onClick={() => deleteRepairHistory(selectedRepair.id)} 
+              className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+            >
+              🗑️ ลบ
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setShowEditRepairModal(false)} 
+              className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+            >
+              ❌ ยกเลิก
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// แก้ไข RepairHistoryModal ให้คลิกแก้ไขได้
+const RepairHistoryModal = () => (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+    <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+            🔧 ประวัติการซ่อมทั้งหมด
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">รวม {repairHistory.length} รายการ</p>
+        </div>
+        <button 
+          onClick={() => setShowRepairHistoryModal(false)} 
+          className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {repairHistory.map((repair) => (
+          <div 
+            key={repair.id} 
+            className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-100 rounded-2xl p-6 hover:shadow-2xl transition-all cursor-pointer"
+            onClick={() => {
+              setSelectedRepair(repair);
+              setShowEditRepairModal(true);
+            }}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="font-bold text-xl text-gray-900">{repair.asset_name}</h3>
+                <p className="text-sm text-gray-600">รหัส: {repair.asset_tag}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-4 py-2 rounded-full text-sm font-bold ${
+                  repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' : 
+                  repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' : 
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {repair.repair_status}
+                </span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedRepair(repair);
+                    setShowEditRepairModal(true);
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold transition-all hover:scale-105"
+                >
+                  ✏️ แก้ไข
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl mb-4 border border-orange-100">
+              <p className="text-sm font-semibold text-gray-900">{repair.issue_description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="bg-white p-3 rounded-lg border border-orange-100">
+                <p className="text-gray-500 mb-1">ค่าใช้จ่าย</p>
+                <p className="font-bold text-lg text-red-600">฿{repair.repair_cost.toLocaleString()}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-orange-100">
+                <p className="text-gray-500 mb-1">ช่าง</p>
+                <p className="font-bold text-gray-900">{repair.technician || '-'}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-orange-100">
+                <p className="text-gray-500 mb-1">วันที่เริ่ม</p>
+                <p className="font-bold text-gray-900">{repair.start_date}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-orange-100">
+                <p className="text-gray-500 mb-1">วันที่เสร็จ</p>
+                <p className="font-bold text-gray-900">{repair.end_date || '-'}</p>
+              </div>
+            </div>
+
+            {repair.notes && (
+              <div className="mt-4 pt-4 border-t border-orange-200">
+                <p className="text-sm text-gray-600">
+                  <strong>หมายเหตุ:</strong> {repair.notes}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {repairHistory.length === 0 && (
+          <div className="text-center py-20">
+            <span className="text-8xl mb-6 block animate-bounce">🔧</span>
+            <p className="text-2xl font-bold text-gray-700 mb-2">ไม่มีประวัติการซ่อม</p>
+            <p className="text-gray-500">ระบบยังไม่มีการบันทึกการซ่อมทรัพย์สิน</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
 
   const addTransaction = async (transactionData: Partial<InkTransaction>): Promise<void> => {
     try {
@@ -1916,6 +2217,7 @@ const EditAssetModal = () => {
       {showCategoryModal && <CategoryModal />}
       {showAddRepairModal && <AddRepairModal />}
       {showRepairHistoryModal && <RepairHistoryModal />}
+      {showEditRepairModal && <EditRepairModal />}
       {showInkTransactionModal && <InkTransactionModal />}
       {showProfileModal && <ProfileModal />}
       {showSettingsModal && <SettingsModal />}
