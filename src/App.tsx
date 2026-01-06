@@ -607,7 +607,7 @@ const EditRepairModal = () => {
 };
 
 // แก้ไข RepairHistoryModal ให้คลิกแก้ไขได้
-const RepairHistoryModal = () => (
+
   <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
     <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
       <div className="flex items-center justify-between mb-8">
