@@ -36,16 +36,15 @@ const AssetDetail = () => {
 
       setAsset(assetData as Asset);
 
-      // Fetch repair history
+      // Fetch repair history - ✅ แก้ชื่อ table ให้ถูกต้อง
       const { data: repairData, error: repairError } = await supabase
-        .from('repairhistory')
+        .from('repair_history')  // ✅ เปลี่ยนจาก 'repairhistory'
         .select('*')
-        .eq('assetid', assetId)
-        .order('createdat', { ascending: false });
+        .eq('asset_id', assetId)  // ✅ เปลี่ยนจาก 'assetid'
+        .order('created_at', { ascending: false });  // ✅ เปลี่ยนจาก 'createdat'
 
       if (repairError) {
         console.error('Repair history fetch error:', repairError);
-        // ไม่ต้อง return เพราะ asset data ได้แล้ว
       } else {
         setRepairs(repairData as RepairHistory[]);
       }
@@ -129,14 +128,15 @@ const AssetDetail = () => {
             { label: '📦 ประเภท', value: asset.category },
             { label: '🏢 แผนก', value: asset.location },
             { label: '📊 สถานะ', value: asset.status, 
-              color: asset.status === 'ปกติ' ? 'text-green-600' : 
-                     asset.status === 'ซ่อม' ? 'text-orange-600' : 'text-red-600' },
+              color: asset.status === 'ใช้งาน' ? 'text-green-600' : 
+                     asset.status === 'ซ่อม' ? 'text-orange-600' : 'text-gray-600' },
             { label: '📅 วันที่ซื้อ', value: asset.purchase_date },
             { label: '🛡️ การรับประกันหมดอายุ', value: asset.warranty_expiry, 
               color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' },
             { label: '💰 ราคา', value: `฿${asset.price}`, color: 'text-green-600' },
             { label: '⏰ วันรับประกันคงเหลือ', value: `${asset.warranty_days} วัน`,
-              color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' }
+              color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' },
+            { label: '👤 ผู้ใช้งาน', value: asset.assigned_user || '-' }
           ].map((item, idx) => (
             <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-gray-200 hover:shadow-lg transition-all">
               <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
