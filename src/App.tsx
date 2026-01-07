@@ -25,10 +25,10 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
-  // Modal states
-  const [showAddAsset, setShowAddAsset] = useState(false);
-  const [showAddRepair, setShowAddRepair] = useState(false);
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  // Modal states - keep for future use
+  const [, setShowAddAsset] = useState(false);
+  const [, setShowAddRepair] = useState(false);
+  const [, setShowAddTransaction] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showAssetDetail, setShowAssetDetail] = useState(false);
 
@@ -108,9 +108,9 @@ function App() {
               />
             )}
 
-            {/* QR Code Component */}
+            {/* QR Code Component - Fixed: removed size prop */}
             <div className="flex justify-center">
-              <AssetQRCode asset={selectedAsset} size={200} />
+              <AssetQRCode asset={selectedAsset} />
             </div>
 
             {/* Asset Header */}
@@ -179,6 +179,7 @@ function App() {
                 onClick={() => {
                   setShowAssetDetail(false);
                   // TODO: Open edit modal
+                  console.log('Edit asset:', selectedAsset.id);
                 }}
                 className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
               >
@@ -420,7 +421,10 @@ function App() {
                   📥 Export CSV
                 </button>
                 <button
-                  onClick={() => setShowAddAsset(true)}
+                  onClick={() => {
+                    setShowAddAsset(true);
+                    console.log('Add asset clicked');
+                  }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   ➕ เพิ่มทรัพย์สิน
@@ -469,7 +473,10 @@ function App() {
                   📥 Export CSV
                 </button>
                 <button
-                  onClick={() => setShowAddRepair(true)}
+                  onClick={() => {
+                    setShowAddRepair(true);
+                    console.log('Add repair clicked');
+                  }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   ➕ เพิ่มการซ่อม
@@ -571,7 +578,10 @@ function App() {
                   📥 Export CSV
                 </button>
                 <button
-                  onClick={() => setShowAddTransaction(true)}
+                  onClick={() => {
+                    setShowAddTransaction(true);
+                    console.log('Add transaction clicked');
+                  }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   ➕ เพิ่มรายการ
@@ -661,34 +671,6 @@ function App() {
 
       {/* Asset Detail Modal */}
       {showAssetDetail && selectedAsset && <AssetDetailModal />}
-
-      {/* TODO: Add Modal Components */}
-      {/* 
-      {showAddAsset && (
-        <AddAssetModal
-          isOpen={showAddAsset}
-          onClose={() => setShowAddAsset(false)}
-          departments={departmentNames}
-          categories={categoryNames}
-        />
-      )}
-
-      {showAddRepair && (
-        <AddRepairModal
-          isOpen={showAddRepair}
-          onClose={() => setShowAddRepair(false)}
-          assets={assets}
-          selectedAssetId={selectedAsset?.id}
-        />
-      )}
-
-      {showAddTransaction && (
-        <AddTransactionModal
-          isOpen={showAddTransaction}
-          onClose={() => setShowAddTransaction(false)}
-        />
-      )}
-      */}
     </div>
   );
 }
