@@ -26,6 +26,9 @@ function App() {
   const [selectedStatus, setSelectedStatus] = useState('');
 
   // Modal states
+  const [showAddAsset, setShowAddAsset] = useState(false);
+  const [showAddRepair, setShowAddRepair] = useState(false);
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showAssetDetail, setShowAssetDetail] = useState(false);
 
@@ -74,14 +77,7 @@ function App() {
     };
   }).filter(cat => cat.count > 0);
 
-  // Ink budget calculations
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthlyTransactions = transactions.filter(t => t.transaction_date.startsWith(currentMonth));
-  const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
-  const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
-  const netAmount = totalIncome - totalExpense;
-
-  // Asset Detail Modal
+  // Asset Detail Modal Component
   const AssetDetailModal = () => {
     if (!selectedAsset) return null;
 
@@ -96,13 +92,14 @@ function App() {
             </h2>
             <button 
               onClick={() => setShowAssetDetail(false)} 
-              className="text-gray-400 hover:text-gray-600 text-3xl"
+              className="text-gray-400 hover:text-gray-600 text-3xl transition-colors"
             >
               ×
             </button>
           </div>
 
           <div className="space-y-6">
+            {/* Asset Image */}
             {selectedAsset.image_url && (
               <img 
                 src={selectedAsset.image_url} 
@@ -112,8 +109,11 @@ function App() {
             )}
 
             {/* QR Code Component */}
-            <AssetQRCode asset={selectedAsset} />
+            <div className="flex justify-center">
+              <AssetQRCode asset={selectedAsset} size={200} />
+            </div>
 
+            {/* Asset Header */}
             <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-100">
               <div className="flex items-center gap-5 mb-5">
                 <span className="text-6xl">📦</span>
@@ -124,6 +124,7 @@ function App() {
               </div>
             </div>
 
+            {/* Asset Details Grid */}
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: 'รหัสทรัพย์สิน', value: selectedAsset.tag },
@@ -131,9 +132,9 @@ function App() {
                 { label: 'แผนก', value: selectedAsset.department },
                 { label: 'สถานะ', value: selectedAsset.status },
                 { label: 'วันที่ซื้อ', value: formatDate(selectedAsset.purchase_date) },
-                { label: 'หมดประกัน', value: formatDate(selectedAsset.warranty_end) },
+                { label: 'หมดประกัน', value: selectedAsset.warranty_end ? formatDate(selectedAsset.warranty_end) : '-' },
                 { label: 'ราคา', value: formatCurrency(selectedAsset.purchase_price), color: 'text-green-600' },
-                { label: 'สถานที่', value: selectedAsset.location }
+                { label: 'สถานที่', value: selectedAsset.location || '-' }
               ].map((item, idx) => (
                 <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
                   <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
@@ -172,6 +173,7 @@ function App() {
               </div>
             )}
 
+            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => {
@@ -198,6 +200,7 @@ function App() {
     );
   };
 
+  // Loading state
   if (assetsLoading && assets.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -346,39 +349,6 @@ function App() {
               </div>
             </div>
 
-            {/* Ink Budget Summary */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-green-700">💰 งบประมาณหมึกเดือนนี้</h3>
-                <button
-                  onClick={() => setActiveTab('ink')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  ดูทั้งหมด →
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                  <p className="text-sm text-gray-600 mb-2">รายรับทั้งหมด</p>
-                  <p className="text-3xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
-                  <p className="text-xs text-gray-500 mt-1">{monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').length} รายการ</p>
-                </div>
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                  <p className="text-sm text-gray-600 mb-2">รายจ่ายทั้งหมด</p>
-                  <p className="text-3xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
-                  <p className="text-xs text-gray-500 mt-1">{monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').length} รายการ</p>
-                </div>
-                <div className="bg-white p-6 rounded-xl shadow-md">
-                  <p className="text-sm text-gray-600 mb-2">ยอดสุทธิ</p>
-                  <p className={`text-3xl font-bold ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                    {netAmount >= 0 ? '+' : ''}{formatCurrency(netAmount)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">{netAmount >= 0 ? 'กำไร' : 'ขาดทุน'}</p>
-                </div>
-              </div>
-            </div>
-
             {/* Category Distribution */}
             {categoryDistribution.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -400,6 +370,35 @@ function App() {
                       <div className="w-16 text-right text-sm text-gray-600">{cat.count} รายการ</div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Budget Summary */}
+            {summary && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-gray-700">งบประมาณหมึก</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <StatCard
+                    title="รายรับทั้งหมด"
+                    value={formatCurrency(summary.total_income)}
+                    icon="💵"
+                    color="green"
+                    onClick={() => setActiveTab('ink')}
+                  />
+                  <StatCard
+                    title="รายจ่ายทั้งหมด"
+                    value={formatCurrency(summary.total_expense)}
+                    icon="💳"
+                    color="red"
+                  />
+                  <StatCard
+                    title="ยอดสุทธิ"
+                    value={formatCurrency(summary.net_amount)}
+                    subtitle={summary.net_amount >= 0 ? 'กำไร' : 'ขาดทุน'}
+                    icon={summary.net_amount >= 0 ? '📈' : '📉'}
+                    color={summary.net_amount >= 0 ? 'blue' : 'orange'}
+                  />
                 </div>
               </div>
             )}
@@ -660,13 +659,35 @@ function App() {
         </div>
       </footer>
 
-      {/* Modals - TODO: Implement modal components */}
-      {showAssetDetail && <AssetDetailModal />}
-      
-      {/* TODO: Add other modals:
-      {showAddAsset && <AddAssetModal />}
-      {showAddRepair && <AddRepairModal />}
-      {showAddTransaction && <AddTransactionModal />}
+      {/* Asset Detail Modal */}
+      {showAssetDetail && selectedAsset && <AssetDetailModal />}
+
+      {/* TODO: Add Modal Components */}
+      {/* 
+      {showAddAsset && (
+        <AddAssetModal
+          isOpen={showAddAsset}
+          onClose={() => setShowAddAsset(false)}
+          departments={departmentNames}
+          categories={categoryNames}
+        />
+      )}
+
+      {showAddRepair && (
+        <AddRepairModal
+          isOpen={showAddRepair}
+          onClose={() => setShowAddRepair(false)}
+          assets={assets}
+          selectedAssetId={selectedAsset?.id}
+        />
+      )}
+
+      {showAddTransaction && (
+        <AddTransactionModal
+          isOpen={showAddTransaction}
+          onClose={() => setShowAddTransaction(false)}
+        />
+      )}
       */}
     </div>
   );
