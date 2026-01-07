@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './services/supabase';
-import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './types';
+import { supabase } from './supabaseClient';
+import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
 import QRCode from 'react-qr-code';
 
 
@@ -104,7 +104,7 @@ const AssetQRCode = ({ asset }: { asset: Asset }) => {
               <img src="${svgBase64}" width="200" height="200" alt="QR Code" />
             </div>
             <div class="info">
-              <span class="info-label">🏷️ Asset Tag:</span>
+              <span class="info-label">🏷️ รหัสทรัพย์สิน:</span>
               <span class="info-value">${asset.tag}</span>
             </div>
             <div class="info">

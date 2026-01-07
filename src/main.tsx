@@ -7,7 +7,6 @@ import AssetDetail from './AssetDetail'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />

@@ -1,4 +1,3 @@
-@ -1,142 +1,142 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -37,20 +36,15 @@ const AssetDetail = () => {
 
       setAsset(assetData as Asset);
 
-      // Fetch repair history
       // Fetch repair history - ✅ แก้ชื่อ table ให้ถูกต้อง
       const { data: repairData, error: repairError } = await supabase
-        .from('repairhistory')
         .from('repair_history')  // ✅ เปลี่ยนจาก 'repairhistory'
         .select('*')
-        .eq('assetid', assetId)
-        .order('createdat', { ascending: false });
         .eq('asset_id', assetId)  // ✅ เปลี่ยนจาก 'assetid'
         .order('created_at', { ascending: false });  // ✅ เปลี่ยนจาก 'createdat'
 
       if (repairError) {
         console.error('Repair history fetch error:', repairError);
-        // ไม่ต้อง return เพราะ asset data ได้แล้ว
       } else {
         setRepairs(repairData as RepairHistory[]);
       }
@@ -134,8 +128,6 @@ const AssetDetail = () => {
             { label: '📦 ประเภท', value: asset.category },
             { label: '🏢 แผนก', value: asset.location },
             { label: '📊 สถานะ', value: asset.status, 
-              color: asset.status === 'ปกติ' ? 'text-green-600' : 
-                     asset.status === 'ซ่อม' ? 'text-orange-600' : 'text-red-600' },
               color: asset.status === 'ใช้งาน' ? 'text-green-600' : 
                      asset.status === 'ซ่อม' ? 'text-orange-600' : 'text-gray-600' },
             { label: '📅 วันที่ซื้อ', value: asset.purchase_date },
@@ -143,9 +135,56 @@ const AssetDetail = () => {
               color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' },
             { label: '💰 ราคา', value: `฿${asset.price}`, color: 'text-green-600' },
             { label: '⏰ วันรับประกันคงเหลือ', value: `${asset.warranty_days} วัน`,
-              color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' }
               color: asset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' },
             { label: '👤 ผู้ใช้งาน', value: asset.assigned_user || '-' }
           ].map((item, idx) => (
             <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border-2 border-gray-200 hover:shadow-lg transition-all">
               <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
+              <p className={`font-bold text-xl ${item.color || 'text-gray-900'}`}>
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Repair History */}
+        {repairs.length > 0 && (
+          <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border-2 border-orange-200">
+            <h3 className="font-bold text-2xl mb-4 flex items-center gap-2">
+              🔧 ประวัติการซ่อม ({repairs.length} ครั้ง)
+            </h3>
+            <div className="space-y-4">
+              {repairs.map(repair => (
+                <div key={repair.id} className="bg-white p-5 rounded-xl border border-orange-100 hover:shadow-lg transition-all">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="font-semibold text-gray-900 text-lg">{repair.issue_description}</p>
+                    <span className={`px-4 py-1 rounded-full text-xs font-bold ${
+                      repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' :
+                      repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {repair.repair_status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
+                    <p>💰 ค่าใช้จ่าย: <span className="font-bold text-red-600">฿{repair.repair_cost.toLocaleString()}</span></p>
+                    <p>👨‍🔧 ช่าง: <span className="font-semibold">{repair.technician || '-'}</span></p>
+                    <p>📅 วันที่เริ่ม: {repair.start_date}</p>
+                    <p>✅ วันที่เสร็จ: {repair.end_date || '-'}</p>
+                  </div>
+                  {repair.notes && (
+                    <p className="mt-3 pt-3 border-t border-orange-200 text-sm text-gray-600">
+                      📝 หมายเหตุ: {repair.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AssetDetail;
