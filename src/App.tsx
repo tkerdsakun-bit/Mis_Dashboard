@@ -26,9 +26,6 @@ function App() {
   const [selectedStatus, setSelectedStatus] = useState('');
 
   // Modal states
-  const [showAddAsset, setShowAddAsset] = useState(false);
-  const [showAddRepair, setShowAddRepair] = useState(false);
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showAssetDetail, setShowAssetDetail] = useState(false);
 
