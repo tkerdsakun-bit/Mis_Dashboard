@@ -11,7 +11,7 @@ import { useRepairHistory } from './hooks/useRepairHistory';
 import { useInkTransactions } from './hooks/useInkTransactions';
 import { exportAssetsToCSV, exportRepairsToCSV, exportTransactionsToCSV } from './utils/exportUtils';
 import { formatCurrency, formatDate } from './utils/formatters';
-import type { Asset, RepairHistory } from './types';
+import type { Asset } from './types';
 
 type TabType = 'dashboard' | 'assets' | 'repairs' | 'ink';
 
@@ -24,11 +24,11 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
-  // Modal states (placeholders - will be implemented with modal components)
-  const [showAddAsset, setShowAddAsset] = useState(false);
-  const [showAddRepair, setShowAddRepair] = useState(false);
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  // Modal states - keeping these for future implementation
+  const [, setShowAddAsset] = useState(false);
+  const [, setShowAddRepair] = useState(false);
+  const [, setShowAddTransaction] = useState(false);
+  const [, setSelectedAsset] = useState<Asset | null>(null);
 
   // Data hooks
   const { assets, loading: assetsLoading } = useAssets();
@@ -529,18 +529,6 @@ function App() {
           </div>
         </div>
       </footer>
-
-      {/* TODO: Modal Components will be imported and used here */}
-      {/* Example:
-      {showAddAsset && (
-        <AddAssetModal
-          isOpen={showAddAsset}
-          onClose={() => setShowAddAsset(false)}
-          departments={departmentNames}
-          categories={categoryNames}
-        />
-      )}
-      */}
     </div>
   );
 }
