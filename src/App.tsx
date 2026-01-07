@@ -4,6 +4,7 @@ import { StatCard } from './components/common/StatCard';
 import { AssetList } from './components/assets/AssetList';
 import { AssetFilters } from './components/assets/AssetFilters';
 import { AssetStats } from './components/assets/AssetStats';
+import { AssetQRCode } from './components/assets/AssetQRCode';
 import { useAssets } from './hooks/useAssets';
 import { useDepartments } from './hooks/useDepartments';
 import { useCategories } from './hooks/useCategories';
@@ -24,11 +25,12 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
-  // Modal states - keeping these for future implementation
-  const [, setShowAddAsset] = useState(false);
-  const [, setShowAddRepair] = useState(false);
-  const [, setShowAddTransaction] = useState(false);
-  const [, setSelectedAsset] = useState<Asset | null>(null);
+  // Modal states
+  const [showAddAsset, setShowAddAsset] = useState(false);
+  const [showAddRepair, setShowAddRepair] = useState(false);
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [showAssetDetail, setShowAssetDetail] = useState(false);
 
   // Data hooks
   const { assets, loading: assetsLoading } = useAssets();
@@ -74,6 +76,130 @@ function App() {
       percent: assets.length > 0 ? Math.round((count / assets.length) * 100) : 0
     };
   }).filter(cat => cat.count > 0);
+
+  // Ink budget calculations
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthlyTransactions = transactions.filter(t => t.transaction_date.startsWith(currentMonth));
+  const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
+  const netAmount = totalIncome - totalExpense;
+
+  // Asset Detail Modal
+  const AssetDetailModal = () => {
+    if (!selectedAsset) return null;
+
+    const assetRepairs = repairs.filter(r => r.asset_id === selectedAsset.id);
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              รายละเอียดทรัพย์สิน
+            </h2>
+            <button 
+              onClick={() => setShowAssetDetail(false)} 
+              className="text-gray-400 hover:text-gray-600 text-3xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {selectedAsset.image_url && (
+              <img 
+                src={selectedAsset.image_url} 
+                alt={selectedAsset.name} 
+                className="w-full h-72 object-cover rounded-2xl shadow-xl" 
+              />
+            )}
+
+            {/* QR Code Component */}
+            <AssetQRCode asset={selectedAsset} />
+
+            <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-100">
+              <div className="flex items-center gap-5 mb-5">
+                <span className="text-6xl">📦</span>
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900">{selectedAsset.name}</h3>
+                  <p className="text-gray-600 text-lg">รหัส: {selectedAsset.tag}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'รหัสทรัพย์สิน', value: selectedAsset.tag },
+                { label: 'หมวดหมู่', value: selectedAsset.category },
+                { label: 'แผนก', value: selectedAsset.department },
+                { label: 'สถานะ', value: selectedAsset.status },
+                { label: 'วันที่ซื้อ', value: formatDate(selectedAsset.purchase_date) },
+                { label: 'หมดประกัน', value: formatDate(selectedAsset.warranty_end) },
+                { label: 'ราคา', value: formatCurrency(selectedAsset.purchase_price), color: 'text-green-600' },
+                { label: 'สถานที่', value: selectedAsset.location }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
+                  <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
+                  <p className={`font-bold text-lg ${item.color || 'text-gray-900'}`}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Repair History */}
+            {assetRepairs.length > 0 && (
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200">
+                <h4 className="font-bold text-xl mb-4 flex items-center gap-2">
+                  🔧 ประวัติการซ่อม ({assetRepairs.length} ครั้ง)
+                </h4>
+                <div className="space-y-3">
+                  {assetRepairs.map((repair) => (
+                    <div key={repair.id} className="bg-white p-4 rounded-xl border border-orange-100">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-semibold text-gray-900">{repair.issue_description}</p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' :
+                          repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {repair.repair_status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>💰 ค่าใช้จ่าย: {formatCurrency(repair.repair_cost)}</p>
+                        <p>👨‍🔧 ช่าง: {repair.technician || '-'}</p>
+                        <p>📅 วันที่: {formatDate(repair.start_date)} {repair.end_date ? `→ ${formatDate(repair.end_date)}` : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => {
+                  setShowAssetDetail(false);
+                  // TODO: Open edit modal
+                }}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+              >
+                ✏️ แก้ไข
+              </button>
+              <button
+                onClick={() => {
+                  setShowAssetDetail(false);
+                  setShowAddRepair(true);
+                }}
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all"
+              >
+                🔧 เพิ่มการซ่อม
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (assetsLoading && assets.length === 0) {
     return (
@@ -223,6 +349,39 @@ function App() {
               </div>
             </div>
 
+            {/* Ink Budget Summary */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-green-700">💰 งบประมาณหมึกเดือนนี้</h3>
+                <button
+                  onClick={() => setActiveTab('ink')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  ดูทั้งหมด →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                  <p className="text-sm text-gray-600 mb-2">รายรับทั้งหมด</p>
+                  <p className="text-3xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                  <p className="text-xs text-gray-500 mt-1">{monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').length} รายการ</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                  <p className="text-sm text-gray-600 mb-2">รายจ่ายทั้งหมด</p>
+                  <p className="text-3xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
+                  <p className="text-xs text-gray-500 mt-1">{monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').length} รายการ</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-md">
+                  <p className="text-sm text-gray-600 mb-2">ยอดสุทธิ</p>
+                  <p className={`text-3xl font-bold ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                    {netAmount >= 0 ? '+' : ''}{formatCurrency(netAmount)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{netAmount >= 0 ? 'กำไร' : 'ขาดทุน'}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Category Distribution */}
             {categoryDistribution.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -244,35 +403,6 @@ function App() {
                       <div className="w-16 text-right text-sm text-gray-600">{cat.count} รายการ</div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Budget Summary */}
-            {summary && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-gray-700">งบประมาณหมึก</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <StatCard
-                    title="รายรับทั้งหมด"
-                    value={formatCurrency(summary.total_income)}
-                    icon="💵"
-                    color="green"
-                    onClick={() => setActiveTab('ink')}
-                  />
-                  <StatCard
-                    title="รายจ่ายทั้งหมด"
-                    value={formatCurrency(summary.total_expense)}
-                    icon="💳"
-                    color="red"
-                  />
-                  <StatCard
-                    title="ยอดสุทธิ"
-                    value={formatCurrency(summary.net_amount)}
-                    subtitle={summary.net_amount >= 0 ? 'กำไร' : 'ขาดทุน'}
-                    icon={summary.net_amount >= 0 ? '📈' : '📉'}
-                    color={summary.net_amount >= 0 ? 'blue' : 'orange'}
-                  />
                 </div>
               </div>
             )}
@@ -319,7 +449,10 @@ function App() {
 
             <AssetList
               assets={filteredAssets}
-              onAssetClick={(asset) => setSelectedAsset(asset)}
+              onAssetClick={(asset) => {
+                setSelectedAsset(asset);
+                setShowAssetDetail(true);
+              }}
               loading={assetsLoading}
             />
           </div>
@@ -529,6 +662,15 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Modals - TODO: Implement modal components */}
+      {showAssetDetail && <AssetDetailModal />}
+      
+      {/* TODO: Add other modals:
+      {showAddAsset && <AddAssetModal />}
+      {showAddRepair && <AddRepairModal />}
+      {showAddTransaction && <AddTransactionModal />}
+      */}
     </div>
   );
 }
