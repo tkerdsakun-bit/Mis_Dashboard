@@ -184,7 +184,6 @@ const App = () => {
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
 
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -240,44 +239,10 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   });
 
   const currentMonth = new Date().toISOString().slice(0, 7);
-
-// คำนวณข้อมูล 12 เดือน
-const getLast12Months = () => {
-  const months = [];
-  const now = new Date();
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(date.toISOString().slice(0, 7));
-  }
-  return months;
-};
-
-const last12Months = getLast12Months();
-
-// คำนวณข้อมูลแต่ละเดือน
-const monthlyData = last12Months.map(month => {
-  const monthTransactions = inkTransactions.filter(t => t.month === month);
-  const expense = monthTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
-  const income = monthTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
-  return {
-    month,
-    monthName: new Date(month + '-01').toLocaleDateString('th-TH', { year: 'numeric', month: 'short' }),
-    expense,
-    income,
-    net: income - expense,
-    transactionCount: monthTransactions.length
-  };
-});
-
-const monthlyTransactions = inkTransactions.filter(t => t.month === selectedMonth);
-const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
-const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
-const netAmount = totalIncome - totalExpense;
-
-// คำนวณยอดรวมทั้งหมด
-const totalAllExpense = inkTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
-const totalAllIncome = inkTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
-const totalAllNet = totalAllIncome - totalAllExpense;
+  const monthlyTransactions = inkTransactions.filter(t => t.month === currentMonth);
+  const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
+  const netAmount = totalIncome - totalExpense;
 
   useEffect(() => {
     fetchAllData();
@@ -1953,7 +1918,7 @@ const EditAssetModal = () => {
                 { onClick: () => setShowDepartmentModal(true), color: 'from-gray-500 to-gray-600', label: '🏢' },
                 { onClick: () => setShowCategoryModal(true), color: 'from-indigo-500 to-blue-500', label: '📂' },
                 { onClick: () => setShowRepairHistoryModal(true), color: 'from-orange-500 to-red-500', label: '🔧' },
-                { onClick: () => setShowInkTransactionModal(true), color: 'from-green-500 to-emerald-500', label: '💰' }
+                { onClick: () => window.location.href = './InkReport12Months.html', color: 'from-green-500 to-emerald-500', label: '💰' }
               ].map((btn, idx) => (
                 <button key={idx} onClick={btn.onClick} className={`hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r ${btn.color} text-white hover:shadow-2xl rounded-xl text-xl font-semibold transition-all hover:scale-110`}>
                   {btn.label}
