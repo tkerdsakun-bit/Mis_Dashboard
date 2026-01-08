@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
 import QRCode from 'react-qr-code';
+import { read, utils, writeFile } from 'xlsx';
 
 
 // QR Code Component
@@ -667,21 +668,20 @@ const EditRepairModal = () => {
   };
 
   const exportInkTransactionsToExcel = () => {
-  const workbook = XLSX.utils.book_new();
+  const workbook = utils.book_new();
   
   // Generate all 12 months
   const months: string[] = [];
   for (let i = 11; i >= 0; i--) {
     const date = new Date();
     date.setMonth(date.getMonth() - i);
-    months.push(date.toISOString().slice(0, 7)); // YYYY-MM
+    months.push(date.toISOString().slice(0, 7));
   }
 
   // Create sheet for each month
   months.forEach((month) => {
     const monthlyData = inkTransactions.filter(t => t.month === month);
     
-    // Calculate totals
     const expenses = monthlyData
       .filter(t => t.transaction_type === 'รายจ่าย')
       .reduce((sum, t) => sum + t.amount, 0);
@@ -692,7 +692,7 @@ const EditRepairModal = () => {
 
     const netAmount = incomes - expenses;
 
-    // Create sheet data
+    // Create sheet data - FIX: convert numbers to strings
     const sheetData = [
       ['วันที่', 'ประเภท', 'รายละเอียด', 'หมวดหมู่', 'จำนวนเงิน (฿)'],
       ...monthlyData.map(t => [
@@ -702,46 +702,34 @@ const EditRepairModal = () => {
         t.category || '-',
         t.transaction_type === 'รายจ่าย' ? `-${t.amount}` : `${t.amount}`
       ]),
-      [], // blank row
+      [], 
       ['', '', '---สรุปรายการเดือน---', '', ''],
-      ['', '', 'รายรับทั้งหมด', '', incomes],
-      ['', '', 'รายจ่ายทั้งหมด', '', expenses],
-      ['', '', 'ยอดสุทธิ', '', netAmount >= 0 ? `+${netAmount}` : netAmount]
+      ['', '', 'รายรับทั้งหมด', '', incomes.toString()],
+      ['', '', 'รายจ่ายทั้งหมด', '', expenses.toString()],
+      ['', '', 'ยอดสุทธิ', '', (netAmount >= 0 ? `+${netAmount}` : netAmount.toString())]
     ];
 
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    const ws = utils.aoa_to_sheet(sheetData);
     
     // Set column widths
     ws['!cols'] = [
-      { wch: 12 }, // วันที่
-      { wch: 10 }, // ประเภท
-      { wch: 20 }, // รายละเอียด
-      { wch: 12 }, // หมวดหมู่
-      { wch: 15 }  // จำนวนเงิน
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 15 }
     ];
 
-    // Add styling to header row
-    for (let i = 0; i < 5; i++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-      ws[cellRef].s = {
-        font: { bold: true, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '2563EB' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      };
-    }
-
-    // Add month sheet
     const monthName = new Date(month + '-01').toLocaleDateString('th-TH', {
       year: 'numeric',
-      month: 'long'
-    });
+      month: 'short'
+    }).replace(' ', '-');
     
-    XLSX.utils.book_append_sheet(workbook, ws, monthName);
+    utils.book_append_sheet(workbook, ws, monthName);
   });
 
   // Add Summary sheet
-  const summaryData = [
+  const summaryData: (string | number)[][] = [
     ['เดือน', 'รายรับ (฿)', 'รายจ่าย (฿)', 'ยอดสุทธิ (฿)']
   ];
 
@@ -767,7 +755,7 @@ const EditRepairModal = () => {
     ]);
   });
 
-  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+  const summaryWs = utils.aoa_to_sheet(summaryData);
   summaryWs['!cols'] = [
     { wch: 20 },
     { wch: 15 },
@@ -775,10 +763,10 @@ const EditRepairModal = () => {
     { wch: 15 }
   ];
 
-  XLSX.utils.book_append_sheet(workbook, summaryWs, 'สรุป');
+  utils.book_append_sheet(workbook, summaryWs, 'สรุป');
 
   // Download
-  XLSX.writeFile(workbook, `ink-transactions-${new Date().getFullYear()}.xlsx`);
+  writeFile(workbook, `ink-transactions-${new Date().getFullYear()}.xlsx`);
 };
 
 
