@@ -2432,7 +2432,7 @@ const EditAssetModal = () => {
       <option value="">📊 ทุกสถานะ</option>
       <option value="ใช้งาน">✅ ใช้งาน</option>
       <option value="ชำรุด">⚠️ ชำรุด</option>
-      <option value="จำหน่าย">🗑️ จำหน่าย</option>
+      <option value="ไม่ได้ใช้งาน">🗑️ ไม่ได้ใช้งาน</option>
     </select>
 
     {/* Filter ราคา (รวม Sort + Range) */}
