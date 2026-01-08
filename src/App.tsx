@@ -239,95 +239,10 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
     return { ...cat, count, percent };
   });
 
-const InkTransactionModal = () => {
-  // Generate last 12 months
-  const generateMonths = () => {
-    const months = [];
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      months.push(date.toISOString().slice(0, 7));
-    }
-    return months;
-  };
-
-  const monthsList = generateMonths();
-
-  const changeMonth = (direction: 'prev' | 'next') => {
-    const currentIndex = monthsList.indexOf(selectedMonth);
-    if (direction === 'prev' && currentIndex > 0) {
-      setSelectedMonth(monthsList[currentIndex - 1]);
-    } else if (direction === 'next' && currentIndex < monthsList.length - 1) {
-      setSelectedMonth(monthsList[currentIndex + 1]);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
-        
-        {/* Header with Month Selector */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-4">
-              💰 รายรับ-รายจ่ายหมึก
-            </h2>
-            
-            {/* Month Navigation */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => changeMonth('prev')}
-                disabled={monthsList.indexOf(selectedMonth) === 0}
-                className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
-              >
-                <span className="text-xl">◀</span>
-              </button>
-              
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-6 py-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 cursor-pointer hover:shadow-lg transition-all"
-              >
-                {monthsList.map((month) => (
-                  <option key={month} value={month}>
-                    {new Date(month + '-01').toLocaleDateString('th-TH', { 
-                      year: 'numeric', 
-                      month: 'long' 
-                    })}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => changeMonth('next')}
-                disabled={monthsList.indexOf(selectedMonth) === monthsList.length - 1}
-                className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
-              >
-                <span className="text-xl">▶</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedMonth(new Date().toISOString().slice(0, 7))}
-                className="ml-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:shadow-xl hover:scale-105 transition-all text-sm"
-              >
-                เดือนนี้
-              </button>
-            </div>
-
-            <p className="text-gray-500 text-xs mt-2">
-              รายการทั้งหมด {monthlyTransactions.length} รายการ
-            </p>
-          </div>
-          
-          <button 
-            onClick={() => setShowInkTransactionModal(false)} 
-            className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Rest of your modal content stays the same... */}
+ const monthlyTransactions = inkTransactions.filter(t => t.month === selectedMonth);
+  const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
+  const netAmount = totalIncome - totalExpense;
 
   useEffect(() => {
     fetchAllData();
@@ -1458,7 +1373,7 @@ const EditAssetModal = () => {
 );
 
   const AddTransactionModal = () => {
-    const [formData, setFormData] = useState({ transaction_type: 'รายจ่าย' as 'รายจ่าย' | 'รายรับ', description: '', amount: 0, transaction_date: new Date().toISOString().split('T')[0], month: currentMonth, category: '' });
+    const [formData, setFormData] = useState({ transaction_type: 'รายจ่าย' as 'รายจ่าย' | 'รายรับ', description: '', amount: 0, transaction_date: new Date().toISOString().split('T')[0], month: selectedMonth, category: '' });
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -1511,17 +1426,95 @@ const EditAssetModal = () => {
     );
   };
 
-  const InkTransactionModal = () => (
+  const InkTransactionModal = () => {
+  // Generate last 12 months
+  const generateMonths = () => {
+    const months = [];
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      months.push(date.toISOString().slice(0, 7));
+    }
+    return months;
+  };
+
+  const monthsList = generateMonths();
+
+  const changeMonth = (direction: 'prev' | 'next') => {
+    const currentIndex = monthsList.indexOf(selectedMonth);
+    if (direction === 'prev' && currentIndex > 0) {
+      setSelectedMonth(monthsList[currentIndex - 1]);
+    } else if (direction === 'next' && currentIndex < monthsList.length - 1) {
+      setSelectedMonth(monthsList[currentIndex + 1]);
+    }
+  };
+
+  return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        
+        {/* Header with Month Selector */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">💰 รายรับ-รายจ่ายหมึกเดือนนี้</h2>
-            <p className="text-gray-500 text-sm mt-1">ประจำเดือน {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long' })}</p>
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-4">
+              💰 รายรับ-รายจ่ายหมึก
+            </h2>
+            
+            {/* Month Navigation */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => changeMonth('prev')}
+                disabled={monthsList.indexOf(selectedMonth) === 0}
+                className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
+              >
+                <span className="text-xl">◀</span>
+              </button>
+              
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-6 py-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 cursor-pointer hover:shadow-lg transition-all"
+              >
+                {monthsList.map((month) => (
+                  <option key={month} value={month}>
+                    {new Date(month + '-01').toLocaleDateString('th-TH', { 
+                      year: 'numeric', 
+                      month: 'long' 
+                    })}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => changeMonth('next')}
+                disabled={monthsList.indexOf(selectedMonth) === monthsList.length - 1}
+                className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
+              >
+                <span className="text-xl">▶</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedMonth(new Date().toISOString().slice(0, 7))}
+                className="ml-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:shadow-xl hover:scale-105 transition-all text-sm"
+              >
+                เดือนนี้
+              </button>
+            </div>
+
+            <p className="text-gray-500 text-xs mt-2">
+              รายการทั้งหมด {monthlyTransactions.length} รายการ
+            </p>
           </div>
-          <button onClick={() => setShowInkTransactionModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
+          
+          <button 
+            onClick={() => setShowInkTransactionModal(false)} 
+            className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
+          >
+            ✕
+          </button>
         </div>
 
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-red-50 to-pink-50 p-8 rounded-2xl border-2 border-red-100 shadow-lg hover:shadow-2xl transition-all">
             <div className="flex items-center gap-4 mb-3">
@@ -1563,10 +1556,12 @@ const EditAssetModal = () => {
           </div>
         </div>
 
+        {/* Add Button */}
         <button onClick={() => setShowAddTransactionModal(true)} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-semibold hover:shadow-2xl hover:scale-105 transition-all mb-6 flex items-center justify-center gap-3 text-lg">
           ➕ เพิ่มรายการใหม่
         </button>
 
+        {/* Transaction List */}
         <div className="space-y-3">
           {monthlyTransactions.map((transaction) => (
             <div key={transaction.id} className={`bg-gradient-to-r ${transaction.transaction_type === 'รายจ่าย' ? 'from-red-50 to-pink-50 border-red-100' : 'from-green-50 to-emerald-50 border-green-100'} border-2 rounded-2xl p-6 hover:shadow-xl transition-all`}>
@@ -1604,6 +1599,7 @@ const EditAssetModal = () => {
       </div>
     </div>
   );
+};
 
   const InkBudgetModal = () => {
   // คำนวณยอดรวม
