@@ -670,7 +670,6 @@ const EditRepairModal = () => {
   const exportInkTransactions = () => {
   const workbook = utils.book_new();
   
-  // Generate all 12 months
   const months: string[] = [];
   for (let i = 11; i >= 0; i--) {
     const date = new Date();
@@ -678,24 +677,27 @@ const EditRepairModal = () => {
     months.push(date.toISOString().slice(0, 7));
   }
 
-  // Create sheet for each month
   months.forEach((month) => {
     const monthlyData = inkTransactions.filter(t => t.month === month);
+    
+    // เรียงรายจ่ายก่อน แล้วรายรับ
+    const sortedData = [
+      ...monthlyData.filter(t => t.transaction_type === 'รายจ่าย'),
+      ...monthlyData.filter(t => t.transaction_type === 'รายรับ')
+    ];
     
     const expenses = monthlyData
       .filter(t => t.transaction_type === 'รายจ่าย')
       .reduce((sum, t) => sum + t.amount, 0);
-    
     const incomes = monthlyData
       .filter(t => t.transaction_type === 'รายรับ')
       .reduce((sum, t) => sum + t.amount, 0);
 
     const netAmount = incomes - expenses;
 
-    // Create sheet data - FIX: convert numbers to strings
     const sheetData = [
       ['วันที่', 'ประเภท', 'รายละเอียด', 'หมวดหมู่', 'จำนวนเงิน (฿)'],
-      ...monthlyData.map(t => [
+      ...sortedData.map(t => [
         t.transaction_date,
         t.transaction_type,
         t.description,
@@ -710,8 +712,6 @@ const EditRepairModal = () => {
     ];
 
     const ws = utils.aoa_to_sheet(sheetData);
-    
-    // Set column widths
     ws['!cols'] = [
       { wch: 12 },
       { wch: 10 },
@@ -728,7 +728,6 @@ const EditRepairModal = () => {
     utils.book_append_sheet(workbook, ws, monthName);
   });
 
-  // Add Summary sheet
   const summaryData: (string | number)[][] = [
     ['เดือน', 'รายรับ (฿)', 'รายจ่าย (฿)', 'ยอดสุทธิ (฿)']
   ];
@@ -747,27 +746,16 @@ const EditRepairModal = () => {
       month: 'long'
     });
 
-    summaryData.push([
-      monthName,
-      incomes,
-      expenses,
-      incomes - expenses
-    ]);
+    summaryData.push([monthName, incomes, expenses, incomes - expenses]);
   });
 
   const summaryWs = utils.aoa_to_sheet(summaryData);
-  summaryWs['!cols'] = [
-    { wch: 20 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 15 }
-  ];
-
+  summaryWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
   utils.book_append_sheet(workbook, summaryWs, 'สรุป');
 
-  // Download
   writeFile(workbook, `ink-transactions-${new Date().getFullYear()}.xlsx`);
 };
+
 
 
   // Modal Components
@@ -1452,7 +1440,8 @@ const EditAssetModal = () => {
 );
 
   const AddTransactionModal = () => {
-    const [formData, setFormData] = useState({ transaction_type: 'รายจ่าย' as 'รายจ่าย' | 'รายรับ', description: '', amount: 0, transaction_date: new Date().toISOString().split('T')[0], month: selectedMonth, category: '' });
+    const [formData, setFormData] = useState({ transaction_type: 'รายจ่าย' as 'รายจ่าย' | 'รายรับ', description: '', amount: 0, transaction_date: new Date().toISOString().split('T')[0], month: selectedMonth, category: 'บริการ' });
+
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -1493,7 +1482,12 @@ const EditAssetModal = () => {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">หมวดหมู่</label>
-              <input type="text" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all" placeholder="เช่น ซื้อหมึก, บริการ, คืนเงิน" />
+<select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all">
+  <option value="บริการ">บริการ</option>
+  <option value="คืนเงิน">คืนเงิน</option>
+  <option value="หมึก">ชื่้อหมึก</option>
+</select>
+
             </div>
             <div className="flex gap-4 pt-6">
               <button type="submit" className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all">✅ บันทึก</button>
