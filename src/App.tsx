@@ -768,6 +768,7 @@ const EditRepairModal = () => {
     location: departments[0]?.name || '',
     price: '',
     purchase_date: '',
+     warranty_start: '',
     warranty_expiry: '',
     icon: assetCategories[0]?.icon || '📦',
     status: 'ใช้งาน',
@@ -913,30 +914,40 @@ const EditRepairModal = () => {
             </div>
 
             {/* วันที่ซื้อ */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">วันที่ซื้อ *</label>
-              <input 
-                type="date" 
-                required 
-                value={formData.purchase_date} 
-                onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} 
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-              />
-            </div>
+<div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">📅 วันที่ซื้อ *</label>
+  <input 
+    type="date" 
+    required 
+    value={formData.purchase_date} 
+    onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} 
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+  />
+</div>
 
-            {/* วันหมดประกัน */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">วันหมดประกัน *</label>
-              <input 
-                type="date" 
-                required 
-                value={formData.warranty_expiry} 
-                onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} 
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-              />
-            </div>
-          </div>
+{/* ประกันเริ่ม */}
+<div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">🎫 ประกันเริ่ม *</label>
+  <input 
+    type="date" 
+    required 
+    value={formData.warranty_start} 
+    onChange={(e) => setFormData({...formData, warranty_start: e.target.value})} 
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+  />
+</div>
 
+{/* ประกันหมด */}
+<div>
+  <label className="block text-sm font-semibold text-gray-700 mb-2">⏰ ประกันหมด *</label>
+  <input 
+    type="date" 
+    required 
+    value={formData.warranty_expiry} 
+    onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} 
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+  />
+</div>
           {/* ปุ่ม Submit */}
           <div className="flex gap-4 pt-6">
             <button 
@@ -973,6 +984,7 @@ const EditAssetModal = () => {
     location: selectedAsset.location,
     price: selectedAsset.price,
     purchase_date: selectedAsset.purchase_date,
+    warranty_start: selectedAsset.warranty_start,
     warranty_expiry: selectedAsset.warranty_expiry,
     icon: selectedAsset.icon,
     status: selectedAsset.status,
@@ -1129,79 +1141,83 @@ const EditAssetModal = () => {
 };
 
   const AssetDetailModal = () => {
-    const assetRepairs = repairHistory.filter(r => r.asset_id === selectedAsset?.id);
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">รายละเอียดทรัพย์สิน</h2>
-            <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
-          </div>
-          {selectedAsset && (
-            <div className="space-y-6">
-              {selectedAsset.image_url && <img src={selectedAsset.image_url} alt={selectedAsset.name} className="w-full h-72 object-cover rounded-2xl shadow-xl" />}
+  const assetRepairs = repairHistory.filter(r => r.asset_id === selectedAsset?.id);
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">รายละเอียดทรัพย์สิน</h2>
+          <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
+        </div>
+        {selectedAsset && (
+          <div className="space-y-6">
+            {selectedAsset.image_url && <img src={selectedAsset.image_url} alt={selectedAsset.name} className="w-full h-72 object-cover rounded-2xl shadow-xl" />}
 
-              {/* เพิ่ม QR Code Component ตรงนี้ 👇 */}
-              <AssetQRCode asset={selectedAsset} />
+            {/* QR Code Component */}
+            <AssetQRCode asset={selectedAsset} />
 
-              <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-100">
-                <div className="flex items-center gap-5 mb-5">
-                  <span className="text-6xl">{selectedAsset.icon}</span>
-                  <div>
-                    <h3 className="text-3xl font-bold text-gray-900">{selectedAsset.name}</h3>
-                    <p className="text-gray-600 text-lg">รหัส: {selectedAsset.tag}</p>
-                  </div>
+            <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-100">
+              <div className="flex items-center gap-5 mb-5">
+                <span className="text-6xl">{selectedAsset.icon}</span>
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900">{selectedAsset.name}</h3>
+                  <p className="text-gray-600 text-lg">รหัส: {selectedAsset.tag}</p>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'หมายเลขซีเรียล', value: selectedAsset.serial },
-                  { label: 'หมวดหมู่', value: selectedAsset.category },
-                  { label: 'สถานที่', value: selectedAsset.location },
-                  { label: 'สถานะ', value: selectedAsset.status },
-                  { label: 'วันที่ซื้อ', value: selectedAsset.purchase_date },
-                  { label: 'หมดประกัน', value: selectedAsset.warranty_expiry },
-                  { label: 'ราคา', value: `฿${selectedAsset.price}`, color: 'text-green-600' },
-                  { label: 'การรับประกันคงเหลือ', value: `${selectedAsset.warranty_days} วัน`, color: selectedAsset.warranty_days < 30 ? 'text-yellow-600' : 'text-green-600' },
-                  { label: 'ผู้ใช้งาน', value: selectedAsset.assigned_user }
-                ].map((item, idx) => (
-                  <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-                    <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
-                    <p className={`font-bold text-lg ${item.color || 'text-gray-900'}`}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
-              {assetRepairs.length > 0 && (
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200">
-                  <h4 className="font-bold text-xl mb-4 flex items-center gap-2">🔧 ประวัติการซ่อม ({assetRepairs.length} ครั้ง)</h4>
-                  <div className="space-y-3">
-                    {assetRepairs.map((repair) => (
-                      <div key={repair.id} className="bg-white p-4 rounded-xl border border-orange-100 hover:shadow-lg transition-all">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-semibold text-gray-900">{repair.issue_description}</p>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' : repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{repair.repair_status}</span>
-                        </div>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <p>💰 ค่าใช้จ่าย: ฿{repair.repair_cost.toLocaleString()}</p>
-                          <p>👨‍🔧 ช่าง: {repair.technician || '-'}</p>
-                          <p>📅 วันที่: {repair.start_date} {repair.end_date ? `→ ${repair.end_date}` : ''}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-4">
-                <button onClick={() => { setShowDetailModal(false); setShowEditAssetModal(true); }} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">✏️ แก้ไข</button>
-                <button onClick={() => { setShowDetailModal(false); setShowAddRepairModal(true); }} className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">🔧 เพิ่มการซ่อม</button>
-                <button onClick={() => deleteAsset(selectedAsset.id)} className="bg-gradient-to-r from-red-600 to-pink-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">🗑️ ลบ</button>
               </div>
             </div>
-          )}
-        </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'หมายเลขซีเรียล', value: selectedAsset.serial },
+                { label: 'หมวดหมู่', value: selectedAsset.category },
+                { label: 'สถานที่', value: selectedAsset.location },
+                { label: 'สถานะ', value: selectedAsset.status },
+                { label: '📅 วันที่ซื้อ', value: selectedAsset.purchase_date },
+                { label: '🎫 ประกันเริ่ม', value: selectedAsset.warranty_start },  // ← เพิ่มใหม่
+                { label: '⏰ ประกันหมด', value: selectedAsset.warranty_expiry },
+                { label: '⏳ วันคงเหลือ', value: `${selectedAsset.warranty_days} วัน`, color: selectedAsset.warranty_days < 30 ? 'text-red-600' : 'text-green-600' },
+                { label: 'ราคา', value: `฿${selectedAsset.price}`, color: 'text-green-600' },
+                { label: 'ผู้ใช้งาน', value: selectedAsset.assigned_user || '-' }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
+                  <p className="text-sm text-gray-600 mb-2 font-medium">{item.label}</p>
+                  <p className={`font-bold text-lg ${item.color || 'text-gray-900'}`}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {assetRepairs.length > 0 && (
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200">
+                <h4 className="font-bold text-xl mb-4 flex items-center gap-2">🔧 ประวัติการซ่อม ({assetRepairs.length} ครั้ง)</h4>
+                <div className="space-y-3">
+                  {assetRepairs.map((repair) => (
+                    <div key={repair.id} className="bg-white p-4 rounded-xl border border-orange-100 hover:shadow-lg transition-all">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-semibold text-gray-900">{repair.issue_description}</p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${repair.repair_status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-700' : repair.repair_status === 'กำลังซ่อม' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{repair.repair_status}</span>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>💰 ค่าใช้จ่าย: ฿{repair.repair_cost.toLocaleString()}</p>
+                        <p>👨‍🔧 ช่าง: {repair.technician || '-'}</p>
+                        <p>📅 วันที่: {repair.start_date} {repair.end_date ? `→ ${repair.end_date}` : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <button onClick={() => { setShowDetailModal(false); setShowEditAssetModal(true); }} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">✏️ แก้ไข</button>
+              <button onClick={() => { setShowDetailModal(false); setShowAddRepairModal(true); }} className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">🔧 เพิ่มการซ่อม</button>
+              <button onClick={() => deleteAsset(selectedAsset.id)} className="bg-gradient-to-r from-red-600 to-pink-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2">🗑️ ลบ</button>
+            </div>
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const DepartmentModal = () => {
     const [newDept, setNewDept] = useState('');
