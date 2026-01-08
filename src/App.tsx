@@ -631,8 +631,17 @@ const EditRepairModal = () => {
     }
   };
 
-  const filteredAssets = assets.filter((asset: Asset) => {
-    const matchSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || asset.tag.toLowerCase().includes(searchTerm.toLowerCase());
+    const filteredAssets = assets.filter((asset: Asset) => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch = 
+      asset.name.toLowerCase().includes(searchLower) ||
+      asset.tag.toLowerCase().includes(searchLower) ||
+      asset.serial.toLowerCase().includes(searchLower) ||
+      asset.location.toLowerCase().includes(searchLower) ||
+      asset.category.toLowerCase().includes(searchLower) ||
+      (asset.assigned_user?.toLowerCase() || '').includes(searchLower) ||
+      asset.status.toLowerCase().includes(searchLower) ||
+      asset.price.toLowerCase().includes(searchLower);
     const matchCategory = filterCategory === 'ทั้งหมด' || asset.category === filterCategory;
     const matchStatus = filterStatus === 'ทั้งหมด' || asset.status === filterStatus;
     return matchSearch && matchCategory && matchStatus;
@@ -994,7 +1003,7 @@ const EditAssetModal = () => {
               >
                 <option>ใช้งาน</option>
                 <option>ซ่อม</option>
-                <option>เก็บคลัง</option>
+                <option>ไม่ได้ใช้งาน</option>
               </select>
             </div>
 
@@ -2111,7 +2120,7 @@ const EditAssetModal = () => {
                   <option>ทั้งหมด</option>
                   <option>ใช้งาน</option>
                   <option>ซ่อม</option>
-                  <option>เก็บคลัง</option>
+                  <option>ไม่ได้ใช้งาน</option>
                 </select>
               </div>
             </div>
