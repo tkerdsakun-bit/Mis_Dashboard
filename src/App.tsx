@@ -1918,7 +1918,7 @@ const EditAssetModal = () => {
                 { onClick: () => setShowDepartmentModal(true), color: 'from-gray-500 to-gray-600', label: '🏢' },
                 { onClick: () => setShowCategoryModal(true), color: 'from-indigo-500 to-blue-500', label: '📂' },
                 { onClick: () => setShowRepairHistoryModal(true), color: 'from-orange-500 to-red-500', label: '🔧' },
-                { onClick: () => window.location.href = './InkReport12Months.html', color: 'from-green-500 to-emerald-500', label: '💰' }
+                { onClick: () => setShowInkTransactionModal(true), color: 'from-green-500 to-emerald-500', label: '💰' }
               ].map((btn, idx) => (
                 <button key={idx} onClick={btn.onClick} className={`hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r ${btn.color} text-white hover:shadow-2xl rounded-xl text-xl font-semibold transition-all hover:scale-110`}>
                   {btn.label}
