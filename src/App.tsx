@@ -2399,8 +2399,8 @@ const EditAssetModal = () => {
               </div>
             </div>
 
-   <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-gray-200 shadow-xl">
-  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+ <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-gray-200 shadow-xl">
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
     {/* Search */}
     <div className="relative">
       <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
@@ -2432,31 +2432,38 @@ const EditAssetModal = () => {
       <option value="">📊 ทุกสถานะ</option>
       <option value="ใช้งาน">✅ ใช้งาน</option>
       <option value="ชำรุด">⚠️ ชำรุด</option>
-      <option value="ไม่ได้ใช้งาน">🗑️ ไม่ได้ใช้งาน</option>
+      <option value="จำหน่าย">🗑️ จำหน่าย</option>
     </select>
 
-    {/* Filter ช่วงราคา */}
+    {/* Filter ราคา (รวม Sort + Range) */}
     <select
-      value={filterPriceRange}
-      onChange={e => setFilterPriceRange(e.target.value)}
+      value={filterPriceRange || sortOrder}
+      onChange={e => {
+        const value = e.target.value;
+        // ถ้าเป็น sort (asc/desc) ใส่ใน sortOrder
+        if (value === 'asc' || value === 'desc') {
+          setSortOrder(value);
+          setFilterPriceRange('');
+        } 
+        // ถ้าเป็น range ใส่ใน filterPriceRange
+        else {
+          setFilterPriceRange(value);
+          setSortOrder('');
+        }
+      }}
       className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
     >
-      <option value="">💰 ทุกช่วงราคา</option>
-      <option value="under10k">💵 น้อยกว่า 10,000</option>
-      <option value="10k-50k">💴 10,000 - 50,000</option>
-      <option value="50k-100k">💶 50,000 - 100,000</option>
-      <option value="over100k">💷 มากกว่า 100,000</option>
-    </select>
-
-    {/* Sort ราคา */}
-    <select
-      value={sortOrder}
-      onChange={e => setSortOrder(e.target.value)}
-      className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-    >
-      <option value="">⬍ เรียงตาม</option>
-      <option value="asc">⬆️ ราคาน้อย → มาก</option>
-      <option value="desc">⬇️ ราคามาก → น้อย</option>
+      <option value="">💰 ราคา</option>
+      <optgroup label="📊 เรียงตาม">
+        <option value="asc">⬆️ ราคาน้อย → มาก</option>
+        <option value="desc">⬇️ ราคามาก → น้อย</option>
+      </optgroup>
+      <optgroup label="💵 ช่วงราคา">
+        <option value="under10k">น้อยกว่า 10,000</option>
+        <option value="10k-50k">10,000 - 50,000</option>
+        <option value="50k-100k">50,000 - 100,000</option>
+        <option value="over100k">มากกว่า 100,000</option>
+      </optgroup>
     </select>
   </div>
 
@@ -2481,6 +2488,7 @@ const EditAssetModal = () => {
     </p>
   </div>
 </div>
+
 
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
