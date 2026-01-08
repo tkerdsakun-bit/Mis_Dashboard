@@ -768,13 +768,13 @@ const EditRepairModal = () => {
     location: departments[0]?.name || '',
     price: '',
     purchase_date: '',
-     warranty_start: '',
+    warranty_start: '',
     warranty_expiry: '',
-    icon: assetCategories[0]?.icon || '📦',
+    icon: assetCategories[0]?.icon || '',
     status: 'ใช้งาน',
     warranty_days: 365,
     image_url: '',
-    assigned_user: '' // ✅ เพิ่มฟิลด์ชื่อผู้ใช้งาน
+    assigned_user: ''
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -785,7 +785,9 @@ const EditRepairModal = () => {
     if (file) {
       setImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -805,7 +807,7 @@ const EditRepairModal = () => {
       <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">เพิ่มทรัพย์สินใหม่</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">➕ เพิ่มทรัพย์สินใหม่</h2>
             <p className="text-gray-500 text-sm mt-1">กรอกข้อมูลทรัพย์สินที่ต้องการเพิ่ม</p>
           </div>
           <button onClick={() => setShowAddAssetModal(false)} className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300">✕</button>
@@ -828,7 +830,7 @@ const EditRepairModal = () => {
 
             {/* ชื่อทรัพย์สิน */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อทรัพย์สิน *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📝 ชื่อทรัพย์สิน *</label>
               <input 
                 type="text" 
                 required 
@@ -840,7 +842,7 @@ const EditRepairModal = () => {
 
             {/* รหัสทรัพย์สิน */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสทรัพย์สิน *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">🏷️ รหัสทรัพย์สิน *</label>
               <input 
                 type="text" 
                 required 
@@ -850,9 +852,9 @@ const EditRepairModal = () => {
               />
             </div>
 
-            {/* หมายเลขซีเรียล */}
+            {/* Serial Number */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">หมายเลขซีเรียล *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">🔢 Serial Number *</label>
               <input 
                 type="text" 
                 required 
@@ -864,12 +866,12 @@ const EditRepairModal = () => {
 
             {/* หมวดหมู่ */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">หมวดหมู่ *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📂 หมวดหมู่ *</label>
               <select 
                 value={formData.category} 
-                onChange={(e) => { 
-                  const cat = assetCategories.find(c => c.name === e.target.value); 
-                  setFormData({...formData, category: e.target.value, icon: cat?.icon || '📦'}); 
+                onChange={(e) => {
+                  const cat = assetCategories.find(c => c.name === e.target.value);
+                  setFormData({...formData, category: e.target.value, icon: cat?.icon || ''});
                 }} 
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               >
@@ -879,7 +881,7 @@ const EditRepairModal = () => {
 
             {/* สถานที่ */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">สถานที่ *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📍 สถานที่ *</label>
               <select 
                 value={formData.location} 
                 onChange={(e) => setFormData({...formData, location: e.target.value})} 
@@ -889,21 +891,21 @@ const EditRepairModal = () => {
               </select>
             </div>
 
-            {/* ✅ ชื่อผู้ใช้งาน */}
+            {/* ผู้ใช้งาน */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อผู้ใช้งาน</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">👤 ผู้ใช้งาน</label>
               <input 
                 type="text" 
                 value={formData.assigned_user} 
                 onChange={(e) => setFormData({...formData, assigned_user: e.target.value})} 
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-                placeholder="ระบุชื่อผู้ใช้งาน"
+                placeholder="ไม่ระบุ"
               />
             </div>
 
             {/* ราคา */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">ราคา (บาท) *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">💰 ราคา (บาท) *</label>
               <input 
                 type="text" 
                 required 
@@ -912,50 +914,55 @@ const EditRepairModal = () => {
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
               />
             </div>
+          </div>
 
+          {/* วันที่ 3 ช่อง - แยก grid ใหม่ */}
+          <div className="grid grid-cols-3 gap-5">
             {/* วันที่ซื้อ */}
-<div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">📅 วันที่ซื้อ *</label>
-  <input 
-    type="date" 
-    required 
-    value={formData.purchase_date} 
-    onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} 
-    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-  />
-</div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">📅 วันที่ซื้อ *</label>
+              <input 
+                type="date" 
+                required 
+                value={formData.purchase_date} 
+                onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
 
-{/* ประกันเริ่ม */}
-<div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">🎫 ประกันเริ่ม *</label>
-  <input 
-    type="date" 
-    required 
-    value={formData.warranty_start} 
-    onChange={(e) => setFormData({...formData, warranty_start: e.target.value})} 
-    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-  />
-</div>
+            {/* ประกันเริ่ม */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">🎫 ประกันเริ่ม *</label>
+              <input 
+                type="date" 
+                required 
+                value={formData.warranty_start} 
+                onChange={(e) => setFormData({...formData, warranty_start: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
 
-{/* ประกันหมด */}
-<div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2">⏰ ประกันหมด *</label>
-  <input 
-    type="date" 
-    required 
-    value={formData.warranty_expiry} 
-    onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} 
-    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
-  />
-</div>
-          {/* ปุ่ม Submit */}
+            {/* ประกันหมด */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">⏰ ประกันหมด *</label>
+              <input 
+                type="date" 
+                required 
+                value={formData.warranty_expiry} 
+                onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+              />
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
           <div className="flex gap-4 pt-6">
             <button 
               type="submit" 
               disabled={uploading} 
               className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
             >
-              {uploading ? '⏳ กำลังอัพโหลด...' : '✅ บันทึก'}
+              {uploading ? '⏳ กำลังอัพโหลด...' : '✅ เพิ่มทรัพย์สิน'}
             </button>
             <button 
               type="button" 
@@ -970,6 +977,7 @@ const EditRepairModal = () => {
     </div>
   );
 };
+
 
 
 // ==================== EDIT ASSET MODAL ====================
