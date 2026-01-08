@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import type { Asset, InkItem, Department, AssetCategory, InkBudgetSummary, RepairHistory, InkTransaction } from './supabaseClient';
 import QRCode from 'react-qr-code';
-import { read, utils, writeFile } from 'xlsx';
+import { utils, writeFile } from 'xlsx';
 
 
 // QR Code Component
@@ -667,7 +667,7 @@ const EditRepairModal = () => {
     link.click();
   };
 
-  const exportInkTransactionsToExcel = () => {
+  const exportInkTransactions = () => {
   const workbook = utils.book_new();
   
   // Generate all 12 months
