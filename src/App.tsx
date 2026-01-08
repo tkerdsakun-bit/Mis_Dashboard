@@ -189,7 +189,9 @@ const App = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterPriceRange, setFilterPriceRange] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
+  const [sortOrder, setSortOrder] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('ทั้งหมด');
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -638,7 +640,8 @@ const EditRepairModal = () => {
     }
   };
 
-    const filteredAssets = assets.filter((asset: Asset) => {
+   const filteredAssets = assets
+  .filter((asset: Asset) => {
     const searchLower = searchTerm.toLowerCase();
     const matchSearch = 
       asset.name.toLowerCase().includes(searchLower) ||
@@ -646,12 +649,48 @@ const EditRepairModal = () => {
       asset.serial.toLowerCase().includes(searchLower) ||
       asset.location.toLowerCase().includes(searchLower) ||
       asset.category.toLowerCase().includes(searchLower) ||
-      (asset.assigned_user?.toLowerCase() || '').includes(searchLower) ||
+      asset.assigned_user?.toLowerCase().includes(searchLower) ||
       asset.status.toLowerCase().includes(searchLower) ||
       asset.price.toLowerCase().includes(searchLower);
-    const matchCategory = filterCategory === 'ทั้งหมด' || asset.category === filterCategory;
-    const matchStatus = filterStatus === 'ทั้งหมด' || asset.status === filterStatus;
-    return matchSearch && matchCategory && matchStatus;
+
+    const matchCategory = !filterCategory || asset.category === filterCategory;
+    const matchStatus = !filterStatus || asset.status === filterStatus;
+    
+    // Price Range Filter
+    let matchPrice = true;
+    if (filterPriceRange) {
+      const price = parseFloat(asset.price.replace(/,/g, ''));
+      switch(filterPriceRange) {
+        case 'under10k':
+          matchPrice = price < 10000;
+          break;
+        case '10k-50k':
+          matchPrice = price >= 10000 && price < 50000;
+          break;
+        case '50k-100k':
+          matchPrice = price >= 50000 && price < 100000;
+          break;
+        case 'over100k':
+          matchPrice = price >= 100000;
+          break;
+      }
+    }
+
+    return matchSearch && matchCategory && matchStatus && matchPrice;
+  })
+  // ← เพิ่ม Sort
+  .sort((a, b) => {
+    if (!sortOrder) return 0;
+    
+    const priceA = parseFloat(a.price.replace(/,/g, ''));
+    const priceB = parseFloat(b.price.replace(/,/g, ''));
+    
+    if (sortOrder === 'asc') {
+      return priceA - priceB; // น้อยไปมาก
+    } else if (sortOrder === 'desc') {
+      return priceB - priceA; // มากไปน้อย
+    }
+    return 0;
   });
 
 
@@ -2360,24 +2399,89 @@ const EditAssetModal = () => {
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-gray-200 shadow-xl">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
-                  <input type="text" placeholder="ค้นหา..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-14 pr-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                </div>
-                <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                  <option>ทั้งหมด</option>
-                  {assetCategories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
-                </select>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                  <option>ทั้งหมด</option>
-                  <option>ใช้งาน</option>
-                  <option>ซ่อม</option>
-                  <option>ไม่ได้ใช้งาน</option>
-                </select>
-              </div>
-            </div>
+   <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-gray-200 shadow-xl">
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+    {/* Search */}
+    <div className="relative">
+      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
+      <input 
+        type="text" 
+        placeholder="ค้นหา..." 
+        value={searchTerm} 
+        onChange={e => setSearchTerm(e.target.value)} 
+        className="w-full pl-14 pr-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
+      />
+    </div>
+
+    {/* Filter หมวดหมู่ */}
+    <select 
+      value={filterCategory} 
+      onChange={e => setFilterCategory(e.target.value)} 
+      className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+    >
+      <option value="">📂 ทุกหมวดหมู่</option>
+      {assetCategories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
+    </select>
+
+    {/* Filter สถานะ */}
+    <select 
+      value={filterStatus} 
+      onChange={e => setFilterStatus(e.target.value)} 
+      className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+    >
+      <option value="">📊 ทุกสถานะ</option>
+      <option value="ใช้งาน">✅ ใช้งาน</option>
+      <option value="ชำรุด">⚠️ ชำรุด</option>
+      <option value="จำหน่าย">🗑️ จำหน่าย</option>
+    </select>
+
+    {/* Filter ช่วงราคา */}
+    <select
+      value={filterPriceRange}
+      onChange={e => setFilterPriceRange(e.target.value)}
+      className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+    >
+      <option value="">💰 ทุกช่วงราคา</option>
+      <option value="under10k">💵 น้อยกว่า 10,000</option>
+      <option value="10k-50k">💴 10,000 - 50,000</option>
+      <option value="50k-100k">💶 50,000 - 100,000</option>
+      <option value="over100k">💷 มากกว่า 100,000</option>
+    </select>
+
+    {/* Sort ราคา */}
+    <select
+      value={sortOrder}
+      onChange={e => setSortOrder(e.target.value)}
+      className="px-5 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+    >
+      <option value="">⬍ เรียงตาม</option>
+      <option value="asc">⬆️ ราคาน้อย → มาก</option>
+      <option value="desc">⬇️ ราคามาก → น้อย</option>
+    </select>
+  </div>
+
+  {/* Results count */}
+  <div className="mt-4 flex items-center justify-between">
+    <p className="text-sm text-gray-600">
+      พบ <span className="font-bold text-blue-600">{filteredAssets.length}</span> รายการ
+      {(searchTerm || filterCategory || filterStatus || filterPriceRange || sortOrder) && (
+        <button
+          onClick={() => {
+            setSearchTerm('');
+            setFilterCategory('');
+            setFilterStatus('');
+            setFilterPriceRange('');
+            setSortOrder('');
+          }}
+          className="ml-3 text-red-500 hover:text-red-700 text-sm font-semibold hover:scale-105 transition-all"
+        >
+          ✕ ล้างตัวกรอง
+        </button>
+      )}
+    </p>
+  </div>
+</div>
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAssets.map(asset => (
