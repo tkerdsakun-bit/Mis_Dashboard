@@ -221,7 +221,13 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
   color: 'from-red-500 to-pink-500', 
   bgColor: 'bg-red-50' 
    },
-    { icon: '💰', label: 'มูลค่ารวม', value: `฿${(assets.reduce((sum, a: Asset) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0) / 1000000).toFixed(1)}M`, color: 'from-green-500 to-emerald-500', bgColor: 'bg-green-50' },
+     { 
+  icon: '💰', 
+  label: 'มูลค่ารวม', 
+  value: `฿${assets.reduce((sum, a: Asset) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0).toLocaleString()}`, 
+  color: 'from-green-500 to-emerald-500', 
+  bgColor: 'bg-green-50' 
+},
     { icon: '🏢', label: 'แผนกทั้งหมด', value: departments.length.toString(), color: 'from-purple-500 to-violet-500', bgColor: 'bg-purple-50' },
     { icon: '📂', label: 'ประเภททรัพย์สิน', value: assetCategories.length.toString(), color: 'from-indigo-500 to-blue-500', bgColor: 'bg-indigo-50' }
   ];
