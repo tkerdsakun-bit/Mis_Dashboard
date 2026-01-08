@@ -666,30 +666,121 @@ const EditRepairModal = () => {
     link.click();
   };
 
-  const exportInkTransactions = (): void => {
-    const csvContent = [
-      ['วันที่', 'ประเภท', 'รายละเอียด', 'หมวดหมู่', 'จำนวนเงิน (บาท)', 'เดือน'],
-      ...inkTransactions.map((t: InkTransaction) => [
+  const exportInkTransactionsToExcel = () => {
+  const workbook = XLSX.utils.book_new();
+  
+  // Generate all 12 months
+  const months: string[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date();
+    date.setMonth(date.getMonth() - i);
+    months.push(date.toISOString().slice(0, 7)); // YYYY-MM
+  }
+
+  // Create sheet for each month
+  months.forEach((month) => {
+    const monthlyData = inkTransactions.filter(t => t.month === month);
+    
+    // Calculate totals
+    const expenses = monthlyData
+      .filter(t => t.transaction_type === 'รายจ่าย')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const incomes = monthlyData
+      .filter(t => t.transaction_type === 'รายรับ')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const netAmount = incomes - expenses;
+
+    // Create sheet data
+    const sheetData = [
+      ['วันที่', 'ประเภท', 'รายละเอียด', 'หมวดหมู่', 'จำนวนเงิน (฿)'],
+      ...monthlyData.map(t => [
         t.transaction_date,
         t.transaction_type,
         t.description,
         t.category || '-',
-        t.transaction_type === 'รายจ่าย' ? `-${t.amount}` : t.amount,
-        t.month
+        t.transaction_type === 'รายจ่าย' ? `-${t.amount}` : `${t.amount}`
       ]),
-      [],
-      ['สรุปรายรับ-รายจ่ายเดือน ' + currentMonth],
-      ['รายรับทั้งหมด', totalIncome],
-      ['รายจ่ายทั้งหมด', totalExpense],
-      ['สุทธิ', netAmount >= 0 ? `+${netAmount}` : netAmount]
-    ].map(row => row.join(',')).join('\n');
+      [], // blank row
+      ['', '', '---สรุปรายการเดือน---', '', ''],
+      ['', '', 'รายรับทั้งหมด', '', incomes],
+      ['', '', 'รายจ่ายทั้งหมด', '', expenses],
+      ['', '', 'ยอดสุทธิ', '', netAmount >= 0 ? `+${netAmount}` : netAmount]
+    ];
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
     
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `ink_transactions_${currentMonth}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 12 }, // วันที่
+      { wch: 10 }, // ประเภท
+      { wch: 20 }, // รายละเอียด
+      { wch: 12 }, // หมวดหมู่
+      { wch: 15 }  // จำนวนเงิน
+    ];
+
+    // Add styling to header row
+    for (let i = 0; i < 5; i++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+      ws[cellRef].s = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '2563EB' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+    }
+
+    // Add month sheet
+    const monthName = new Date(month + '-01').toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long'
+    });
+    
+    XLSX.utils.book_append_sheet(workbook, ws, monthName);
+  });
+
+  // Add Summary sheet
+  const summaryData = [
+    ['เดือน', 'รายรับ (฿)', 'รายจ่าย (฿)', 'ยอดสุทธิ (฿)']
+  ];
+
+  months.forEach(month => {
+    const monthlyData = inkTransactions.filter(t => t.month === month);
+    const expenses = monthlyData
+      .filter(t => t.transaction_type === 'รายจ่าย')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const incomes = monthlyData
+      .filter(t => t.transaction_type === 'รายรับ')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const monthName = new Date(month + '-01').toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long'
+    });
+
+    summaryData.push([
+      monthName,
+      incomes,
+      expenses,
+      incomes - expenses
+    ]);
+  });
+
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+  summaryWs['!cols'] = [
+    { wch: 20 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 }
+  ];
+
+  XLSX.utils.book_append_sheet(workbook, summaryWs, 'สรุป');
+
+  // Download
+  XLSX.writeFile(workbook, `ink-transactions-${new Date().getFullYear()}.xlsx`);
+};
+
 
   // Modal Components
   const AddAssetModal = () => {
