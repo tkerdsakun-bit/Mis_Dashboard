@@ -16,6 +16,7 @@ export interface Asset {
   location: string;
   price: string;
   purchase_date: string;
+  warranty_start: string;
   warranty_expiry: string;
   icon: string;
   status: string;
