@@ -185,6 +185,7 @@ const App = () => {
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('ทั้งหมด');
@@ -238,11 +239,95 @@ const [, setInkBudget] = useState<InkBudgetSummary | null>(null);
     return { ...cat, count, percent };
   });
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthlyTransactions = inkTransactions.filter(t => t.month === currentMonth);
-  const totalExpense = monthlyTransactions.filter(t => t.transaction_type === 'รายจ่าย').reduce((sum, t) => sum + t.amount, 0);
-  const totalIncome = monthlyTransactions.filter(t => t.transaction_type === 'รายรับ').reduce((sum, t) => sum + t.amount, 0);
-  const netAmount = totalIncome - totalExpense;
+const InkTransactionModal = () => {
+  // Generate last 12 months
+  const generateMonths = () => {
+    const months = [];
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      months.push(date.toISOString().slice(0, 7));
+    }
+    return months;
+  };
+
+  const monthsList = generateMonths();
+
+  const changeMonth = (direction: 'prev' | 'next') => {
+    const currentIndex = monthsList.indexOf(selectedMonth);
+    if (direction === 'prev' && currentIndex > 0) {
+      setSelectedMonth(monthsList[currentIndex - 1]);
+    } else if (direction === 'next' && currentIndex < monthsList.length - 1) {
+      setSelectedMonth(monthsList[currentIndex + 1]);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+        
+        {/* Header with Month Selector */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-4">
+              💰 รายรับ-รายจ่ายหมึก
+            </h2>
+            
+            {/* Month Navigation */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => changeMonth('prev')}
+                disabled={monthsList.indexOf(selectedMonth) === 0}
+                className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
+              >
+                <span className="text-xl">◀</span>
+              </button>
+              
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-6 py-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 cursor-pointer hover:shadow-lg transition-all"
+              >
+                {monthsList.map((month) => (
+                  <option key={month} value={month}>
+                    {new Date(month + '-01').toLocaleDateString('th-TH', { 
+                      year: 'numeric', 
+                      month: 'long' 
+                    })}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => changeMonth('next')}
+                disabled={monthsList.indexOf(selectedMonth) === monthsList.length - 1}
+                className="p-2 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
+              >
+                <span className="text-xl">▶</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedMonth(new Date().toISOString().slice(0, 7))}
+                className="ml-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:shadow-xl hover:scale-105 transition-all text-sm"
+              >
+                เดือนนี้
+              </button>
+            </div>
+
+            <p className="text-gray-500 text-xs mt-2">
+              รายการทั้งหมด {monthlyTransactions.length} รายการ
+            </p>
+          </div>
+          
+          <button 
+            onClick={() => setShowInkTransactionModal(false)} 
+            className="text-gray-400 hover:text-gray-600 text-3xl transition-colors hover:rotate-90 duration-300"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Rest of your modal content stays the same... */}
 
   useEffect(() => {
     fetchAllData();
