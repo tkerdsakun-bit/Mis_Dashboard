@@ -695,16 +695,105 @@ const EditRepairModal = () => {
 
 
   const exportToExcel = (): void => {
-    const csvContent = [
-      ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานที่', 'สถานะ', 'วันที่ซื้อ', 'ราคา'],
-      ...assets.map((a: Asset) => [a.tag, a.name, a.serial, a.category, a.location, a.status, a.purchase_date, a.price])
-    ].map(row => row.join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `assets_export_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
+  const workbook = utils.book_new();
+  
+  // Sheet 1: รายการทรัพย์สินทั้งหมด
+  const assetsData = [
+    ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานที่', 'สถานะ', 'ผู้ใช้งาน', 'วันที่ซื้อ', 'ประกันเริ่ม', 'ประกันหมด', 'วันคงเหลือ', 'ราคา (฿)'],
+    ...assets.map((a: Asset) => [
+      a.tag, 
+      a.name, 
+      a.serial, 
+      a.category, 
+      a.location, 
+      a.status, 
+      a.assigned_user || '-',
+      a.purchase_date, 
+      a.warranty_start,
+      a.warranty_expiry,
+      a.warranty_days,
+      parseFloat(a.price.replace(/,/g, '')) // ✅ เปลี่ยนเป็นตัวเลข ลบ comma ออก
+    ])
+  ];
+  
+  const ws1 = utils.aoa_to_sheet(assetsData);
+  ws1['!cols'] = [
+    { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, 
+    { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 12 },
+    { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }
+  ];
+  utils.book_append_sheet(workbook, ws1, 'รายการทรัพย์สิน');
+
+  // Sheet 2: สรุปตามหมวดหมู่
+  const categoryData = assetCategories.map(cat => {
+    const categoryAssets = assets.filter(a => a.category === cat.name);
+    const count = categoryAssets.length;
+    const totalValue = categoryAssets.reduce((sum, a) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0);
+    const percent = assets.length > 0 ? ((count / assets.length) * 100).toFixed(2) : '0';
+    return [
+      cat.name, 
+      count, 
+      totalValue, // ✅ เป็นตัวเลข ไม่มี comma
+      parseFloat(percent) // ✅ เปลี่ยนเป็นตัวเลข
+    ];
+  });
+
+  const totalAssets = assets.length;
+  const totalValue = assets.reduce((sum, a) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0);
+
+  const ws2 = utils.aoa_to_sheet([
+    ['หมวดหมู่', 'จำนวน (ชิ้น)', 'มูลค่ารวม (฿)', 'สัดส่วน (%)'],
+    ...categoryData,
+    [],
+    ['รวมทั้งหมด', totalAssets, totalValue, 100] // ✅ ตัวเลขล้วน
+  ]);
+  ws2['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
+  utils.book_append_sheet(workbook, ws2, 'สรุปตามหมวดหมู่');
+
+  // Sheet 3: สรุปตามสถานะ
+  const statusData = ['ใช้งาน', 'ชำรุด', 'ไม่ได้ใช้งาน'].map(status => {
+    const statusAssets = assets.filter(a => a.status === status);
+    const count = statusAssets.length;
+    const totalValue = statusAssets.reduce((sum, a) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0);
+    const percent = assets.length > 0 ? ((count / assets.length) * 100).toFixed(2) : '0';
+    return [
+      status, 
+      count, 
+      totalValue, // ✅ ตัวเลข
+      parseFloat(percent) // ✅ ตัวเลข
+    ];
+  });
+
+  const ws3 = utils.aoa_to_sheet([
+    ['สถานะ', 'จำนวน (ชิ้น)', 'มูลค่ารวม (฿)', 'สัดส่วน (%)'],
+    ...statusData,
+    [],
+    ['รวมทั้งหมด', totalAssets, totalValue, 100] // ✅ ตัวเลข
+  ]);
+  ws3['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
+  utils.book_append_sheet(workbook, ws3, 'สรุปตามสถานะ');
+
+  // Sheet 4: การรับประกันใกล้หมด
+  const warrantyAssets = assets
+    .filter(a => a.warranty_days < 90)
+    .sort((a, b) => a.warranty_days - b.warranty_days)
+    .map(a => [
+      a.tag,
+      a.name,
+      a.warranty_expiry,
+      a.warranty_days,
+      a.warranty_days < 0 ? 'หมดอายุแล้ว' : a.warranty_days < 30 ? 'เร่งด่วน' : 'ใกล้หมด'
+    ]);
+
+  const ws4 = utils.aoa_to_sheet([
+    ['รหัสทรัพย์สิน', 'ชื่อทรัพย์สิน', 'วันหมดประกัน', 'วันคงเหลือ', 'สถานะ'],
+    ...warrantyAssets
+  ]);
+  ws4['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
+  utils.book_append_sheet(workbook, ws4, 'การรับประกันใกล้หมด');
+
+  writeFile(workbook, `assets-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+};
 
 const exportInkTransactions = () => {
   const workbook = utils.book_new();
