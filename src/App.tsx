@@ -706,7 +706,7 @@ const EditRepairModal = () => {
     link.click();
   };
 
-  const exportInkTransactions = () => {
+const exportInkTransactions = () => {
   const workbook = utils.book_new();
   
   const months: string[] = [];
@@ -716,6 +716,59 @@ const EditRepairModal = () => {
     months.push(date.toISOString().slice(0, 7));
   }
 
+  // Sheet 1: สรุปรายรับ-รายจ่าย 12 เดือน (ใส่เป็น Sheet แรก)
+  const summaryData: (string | number)[][] = [
+    ['เดือน', 'รายรับ (฿)', 'รายจ่าย (฿)', 'ยอดสุทธิ (฿)', 'สถานะ']
+  ];
+
+  let totalIncome = 0;
+  let totalExpense = 0;
+
+  months.forEach(month => {
+    const monthlyData = inkTransactions.filter(t => t.month === month);
+    const expenses = monthlyData
+      .filter(t => t.transaction_type === 'รายจ่าย')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const incomes = monthlyData
+      .filter(t => t.transaction_type === 'รายรับ')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    totalIncome += incomes;
+    totalExpense += expenses;
+
+    const netAmount = incomes - expenses;
+    const monthName = new Date(month + '-01').toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long'
+    });
+
+    summaryData.push([
+      monthName, 
+      incomes, 
+      expenses, 
+      netAmount,
+      netAmount >= 0 ? 'กำไร' : 'ขาดทุน'
+    ]);
+  });
+
+  // เพิ่มแถวสรุปรวม
+  const totalNet = totalIncome - totalExpense;
+  summaryData.push(
+    [],
+    ['รวม 12 เดือน', totalIncome, totalExpense, totalNet, totalNet >= 0 ? '✅ กำไร' : '❌ ขาดทุน'],
+    [],
+    ['ค่าเฉลี่ยต่อเดือน', 
+     Math.round(totalIncome / 12), 
+     Math.round(totalExpense / 12), 
+     Math.round(totalNet / 12),
+     '']
+  );
+
+  const summaryWs = utils.aoa_to_sheet(summaryData);
+  summaryWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }];
+  utils.book_append_sheet(workbook, summaryWs, '📊 สรุป 12 เดือน');
+
+  // Sheet 2-13: รายละเอียดแต่ละเดือน
   months.forEach((month) => {
     const monthlyData = inkTransactions.filter(t => t.month === month);
     
@@ -741,20 +794,21 @@ const EditRepairModal = () => {
         t.transaction_type,
         t.description,
         t.category || '-',
-        t.transaction_type === 'รายจ่าย' ? `-${t.amount}` : `${t.amount}`
+        t.transaction_type === 'รายจ่าย' ? -t.amount : t.amount
       ]),
       [], 
       ['', '', '---สรุปรายการเดือน---', '', ''],
-      ['', '', 'รายรับทั้งหมด', '', incomes.toString()],
-      ['', '', 'รายจ่ายทั้งหมด', '', expenses.toString()],
-      ['', '', 'ยอดสุทธิ', '', (netAmount >= 0 ? `+${netAmount}` : netAmount.toString())]
+      ['', '', 'รายรับทั้งหมด', '', incomes],
+      ['', '', 'รายจ่ายทั้งหมด', '', expenses],
+      ['', '', 'ยอดสุทธิ', '', netAmount],
+      ['', '', 'สถานะ', '', netAmount >= 0 ? '✅ กำไร' : '❌ ขาดทุน']
     ];
 
     const ws = utils.aoa_to_sheet(sheetData);
     ws['!cols'] = [
       { wch: 12 },
       { wch: 10 },
-      { wch: 20 },
+      { wch: 25 },
       { wch: 12 },
       { wch: 15 }
     ];
@@ -766,31 +820,6 @@ const EditRepairModal = () => {
     
     utils.book_append_sheet(workbook, ws, monthName);
   });
-
-  const summaryData: (string | number)[][] = [
-    ['เดือน', 'รายรับ (฿)', 'รายจ่าย (฿)', 'ยอดสุทธิ (฿)']
-  ];
-
-  months.forEach(month => {
-    const monthlyData = inkTransactions.filter(t => t.month === month);
-    const expenses = monthlyData
-      .filter(t => t.transaction_type === 'รายจ่าย')
-      .reduce((sum, t) => sum + t.amount, 0);
-    const incomes = monthlyData
-      .filter(t => t.transaction_type === 'รายรับ')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const monthName = new Date(month + '-01').toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long'
-    });
-
-    summaryData.push([monthName, incomes, expenses, incomes - expenses]);
-  });
-
-  const summaryWs = utils.aoa_to_sheet(summaryData);
-  summaryWs['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
-  utils.book_append_sheet(workbook, summaryWs, 'สรุป');
 
   writeFile(workbook, `ink-transactions-${new Date().getFullYear()}.xlsx`);
 };
