@@ -697,30 +697,36 @@ const EditRepairModal = () => {
   const exportToExcel = (): void => {
   const workbook = utils.book_new();
   
-  // Sheet 1: รายการทรัพย์สินทั้งหมด
+  // Sheet 1: รายการทรัพย์สินทั้งหมด (เพิ่มคอลัมน์จำนวนครั้งที่ซ่อม)
   const assetsData = [
-    ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานที่', 'สถานะ', 'ผู้ใช้งาน', 'วันที่ซื้อ', 'ประกันเริ่ม', 'ประกันหมด', 'วันคงเหลือ', 'ราคา (฿)'],
-    ...assets.map((a: Asset) => [
-      a.tag, 
-      a.name, 
-      a.serial, 
-      a.category, 
-      a.location, 
-      a.status, 
-      a.assigned_user || '-',
-      a.purchase_date, 
-      a.warranty_start,
-      a.warranty_expiry,
-      a.warranty_days,
-      parseFloat(a.price.replace(/,/g, '')) // ✅ เปลี่ยนเป็นตัวเลข ลบ comma ออก
-    ])
+    ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานที่', 'สถานะ', 'ผู้ใช้งาน', 'วันที่ซื้อ', 'ประกันเริ่ม', 'ประกันหมด', 'วันคงเหลือ', 'จำนวนครั้งซ่อม', 'ราคา (฿)'],
+    ...assets.map((a: Asset) => {
+      // นับจำนวนครั้งที่ซ่อมของทรัพย์สินแต่ละชิ้น
+      const repairCount = repairHistory.filter(r => r.asset_id === a.id).length;
+      
+      return [
+        a.tag, 
+        a.name, 
+        a.serial, 
+        a.category, 
+        a.location, 
+        a.status, 
+        a.assigned_user || '-',
+        a.purchase_date, 
+        a.warranty_start,
+        a.warranty_expiry,
+        a.warranty_days,
+        repairCount, // ✅ จำนวนครั้งที่ซ่อม
+        parseFloat(a.price.replace(/,/g, ''))
+      ];
+    })
   ];
   
   const ws1 = utils.aoa_to_sheet(assetsData);
   ws1['!cols'] = [
     { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, 
     { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 12 },
-    { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }
+    { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 15 }
   ];
   utils.book_append_sheet(workbook, ws1, 'รายการทรัพย์สิน');
 
@@ -733,8 +739,8 @@ const EditRepairModal = () => {
     return [
       cat.name, 
       count, 
-      totalValue, // ✅ เป็นตัวเลข ไม่มี comma
-      parseFloat(percent) // ✅ เปลี่ยนเป็นตัวเลข
+      totalValue,
+      parseFloat(percent)
     ];
   });
 
@@ -745,7 +751,7 @@ const EditRepairModal = () => {
     ['หมวดหมู่', 'จำนวน (ชิ้น)', 'มูลค่ารวม (฿)', 'สัดส่วน (%)'],
     ...categoryData,
     [],
-    ['รวมทั้งหมด', totalAssets, totalValue, 100] // ✅ ตัวเลขล้วน
+    ['รวมทั้งหมด', totalAssets, totalValue, 100]
   ]);
   ws2['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
   utils.book_append_sheet(workbook, ws2, 'สรุปตามหมวดหมู่');
@@ -759,8 +765,8 @@ const EditRepairModal = () => {
     return [
       status, 
       count, 
-      totalValue, // ✅ ตัวเลข
-      parseFloat(percent) // ✅ ตัวเลข
+      totalValue,
+      parseFloat(percent)
     ];
   });
 
@@ -768,29 +774,120 @@ const EditRepairModal = () => {
     ['สถานะ', 'จำนวน (ชิ้น)', 'มูลค่ารวม (฿)', 'สัดส่วน (%)'],
     ...statusData,
     [],
-    ['รวมทั้งหมด', totalAssets, totalValue, 100] // ✅ ตัวเลข
+    ['รวมทั้งหมด', totalAssets, totalValue, 100]
   ]);
   ws3['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
   utils.book_append_sheet(workbook, ws3, 'สรุปตามสถานะ');
 
-  // Sheet 4: การรับประกันใกล้หมด
+  // Sheet 4: แยกตามแผนก (ใหม่!)
+  departments.forEach(dept => {
+    const deptAssets = assets.filter(a => a.location === dept.name);
+    
+    if (deptAssets.length === 0) return; // ข้ามถ้าแผนกไม่มีทรัพย์สิน
+    
+    const deptData = [
+      ['รหัสทรัพย์สิน', 'ชื่อ', 'ซีเรียล', 'หมวดหมู่', 'สถานะ', 'ผู้ใช้งาน', 'วันที่ซื้อ', 'ประกันหมด', 'วันคงเหลือ', 'จำนวนครั้งซ่อม', 'ราคา (฿)'],
+      ...deptAssets.map(a => {
+        const repairCount = repairHistory.filter(r => r.asset_id === a.id).length;
+        return [
+          a.tag,
+          a.name,
+          a.serial,
+          a.category,
+          a.status,
+          a.assigned_user || '-',
+          a.purchase_date,
+          a.warranty_expiry,
+          a.warranty_days,
+          repairCount,
+          parseFloat(a.price.replace(/,/g, ''))
+        ];
+      }),
+      [],
+      ['สรุป'],
+      ['จำนวนทรัพย์สิน', deptAssets.length],
+      ['มูลค่ารวม (฿)', deptAssets.reduce((sum, a) => sum + parseFloat(a.price.replace(/,/g, '') || '0'), 0)],
+      ['จำนวนครั้งซ่อมทั้งหมด', deptAssets.reduce((sum, a) => {
+        return sum + repairHistory.filter(r => r.asset_id === a.id).length;
+      }, 0)]
+    ];
+    
+    const wsDept = utils.aoa_to_sheet(deptData);
+    wsDept['!cols'] = [
+      { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 15 },
+      { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
+      { wch: 10 }, { wch: 12 }, { wch: 15 }
+    ];
+    
+    // ชื่อ Sheet ห้ามยาวเกิน 31 ตัวอักษร
+    const sheetName = dept.name.length > 28 ? dept.name.substring(0, 28) + '...' : dept.name;
+    utils.book_append_sheet(workbook, wsDept, `🏢 ${sheetName}`);
+  });
+
+  // Sheet 5: การรับประกันใกล้หมด
   const warrantyAssets = assets
     .filter(a => a.warranty_days < 90)
     .sort((a, b) => a.warranty_days - b.warranty_days)
-    .map(a => [
-      a.tag,
-      a.name,
-      a.warranty_expiry,
-      a.warranty_days,
-      a.warranty_days < 0 ? 'หมดอายุแล้ว' : a.warranty_days < 30 ? 'เร่งด่วน' : 'ใกล้หมด'
-    ]);
+    .map(a => {
+      const repairCount = repairHistory.filter(r => r.asset_id === a.id).length;
+      return [
+        a.tag,
+        a.name,
+        a.location,
+        a.warranty_expiry,
+        a.warranty_days,
+        repairCount,
+        a.warranty_days < 0 ? 'หมดอายุแล้ว' : a.warranty_days < 30 ? 'เร่งด่วน' : 'ใกล้หมด'
+      ];
+    });
 
-  const ws4 = utils.aoa_to_sheet([
-    ['รหัสทรัพย์สิน', 'ชื่อทรัพย์สิน', 'วันหมดประกัน', 'วันคงเหลือ', 'สถานะ'],
+  const ws5 = utils.aoa_to_sheet([
+    ['รหัสทรัพย์สิน', 'ชื่อทรัพย์สิน', 'แผนก', 'วันหมดประกัน', 'วันคงเหลือ', 'จำนวนครั้งซ่อม', 'สถานะ'],
     ...warrantyAssets
   ]);
-  ws4['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
-  utils.book_append_sheet(workbook, ws4, 'การรับประกันใกล้หมด');
+  ws5['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+  utils.book_append_sheet(workbook, ws5, 'การรับประกันใกล้หมด');
+
+  // Sheet 6: สรุปการซ่อม (ใหม่!)
+  const repairSummaryData = assets
+    .map(a => {
+      const assetRepairs = repairHistory.filter(r => r.asset_id === a.id);
+      const repairCount = assetRepairs.length;
+      const totalRepairCost = assetRepairs.reduce((sum, r) => sum + r.repair_cost, 0);
+      
+      if (repairCount === 0) return null; // ข้ามทรัพย์สินที่ไม่เคยซ่อม
+      
+      return [
+        a.tag,
+        a.name,
+        a.location,
+        a.category,
+        repairCount,
+        totalRepairCost,
+        parseFloat(a.price.replace(/,/g, '')),
+        ((totalRepairCost / parseFloat(a.price.replace(/,/g, '') || 1)) * 100).toFixed(2) // % ค่าซ่อมต่อราคาทรัพย์สิน
+      ];
+    })
+    .filter(item => item !== null) // กรองเฉพาะที่เคยซ่อม
+    .sort((a, b) => (b?.[4] || 0) - (a?.[4] || 0)); // เรียงตามจำนวนครั้งซ่อม มาก -> น้อย
+
+  const totalRepairs = repairSummaryData.reduce((sum, item) => sum + (item?.[4] || 0), 0);
+  const totalRepairCost = repairSummaryData.reduce((sum, item) => sum + (item?.[5] || 0), 0);
+
+  const ws6 = utils.aoa_to_sheet([
+    ['รหัสทรัพย์สิน', 'ชื่อทรัพย์สิน', 'แผนก', 'หมวดหมู่', 'จำนวนครั้งซ่อม', 'ค่าซ่อมรวม (฿)', 'ราคาทรัพย์สิน (฿)', '% ค่าซ่อม'],
+    ...repairSummaryData,
+    [],
+    ['สรุปรวม'],
+    ['จำนวนทรัพย์สินที่เคยซ่อม', repairSummaryData.length],
+    ['จำนวนครั้งซ่อมทั้งหมด', totalRepairs],
+    ['ค่าซ่อมรวมทั้งหมด (฿)', totalRepairCost]
+  ]);
+  ws6['!cols'] = [
+    { wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 },
+    { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 12 }
+  ];
+  utils.book_append_sheet(workbook, ws6, '🔧 สรุปการซ่อม');
 
   writeFile(workbook, `assets-report-${new Date().toISOString().split('T')[0]}.xlsx`);
 };
